@@ -1,0 +1,42 @@
+<launch>
+  <arg name="trajectory_mode" default="circle"/>
+  <arg name="circle_radius" default="5.0"/>
+  <arg name="circle_omega" default="0.5"/>
+  <arg name="circle_center_x" default="0.0"/>
+  <arg name="circle_center_y" default="0.0"/>
+  <arg name="circle_altitude" default="2.0"/>
+  <arg name="figure_radius" default="5.0"/>
+  <arg name="figure_omega" default="0.5"/>
+  <arg name="figure_center_x" default="0.0"/>
+  <arg name="figure_center_y" default="0.0"/>
+  <arg name="figure_altitude" default="2.0"/>
+  <arg name="helix_radius" default="4.0"/>
+  <arg name="helix_omega" default="0.4"/>
+  <arg name="helix_center_x" default="0.0"/>
+  <arg name="helix_center_y" default="0.0"/>
+  <arg name="helix_base_altitude" default="1.5"/>
+  <arg name="helix_vertical_rate" default="0.4"/>
+  <arg name="helix_revolutions" default="3.0"/>
+
+  <include file="$(find payload_planner)/launch/replan.launch">
+    <arg name="use_planner" value="false"/>
+    <arg name="trajectory_mode" value="$(arg trajectory_mode)"/>
+    <arg name="circle_radius" value="$(arg circle_radius)"/>
+    <arg name="circle_omega" value="$(arg circle_omega)"/>
+    <arg name="circle_center_x" value="$(arg circle_center_x)"/>
+    <arg name="circle_center_y" value="$(arg circle_center_y)"/>
+    <arg name="circle_altitude" value="$(arg circle_altitude)"/>
+    <arg name="figure_radius" value="$(arg figure_radius)"/>
+    <arg name="figure_omega" value="$(arg figure_omega)"/>
+    <arg name="figure_center_x" value="$(arg figure_center_x)"/>
+    <arg name="figure_center_y" value="$(arg figure_center_y)"/>
+    <arg name="figure_altitude" value="$(arg figure_altitude)"/>
+    <arg name="helix_radius" value="$(arg helix_radius)"/>
+    <arg name="helix_omega" value="$(arg helix_omega)"/>
+    <arg name="helix_center_x" value="$(arg helix_center_x)"/>
+    <arg name="helix_center_y" value="$(arg helix_center_y)"/>
+    <arg name="helix_base_altitude" value="$(arg helix_base_altitude)"/>
+    <arg name="helix_vertical_rate" value="$(arg helix_vertical_rate)"/>
+    <arg name="helix_revolutions" value="$(arg helix_revolutions)"/>
+  </include>
+</launch>

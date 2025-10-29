@@ -1,0 +1,5 @@
+<launch>
+  <arg name="use_planner" default="true"/>
+  <arg name="config" default="$(eval '\"$(find payload_planner)/launch/sim_vis.rviz\" if \"$(arg use_planner)\" == \"true\" else \"$(find payload_planner)/launch/controller_only.rviz\"')"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg config)" required="true" />
+</launch>
