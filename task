@@ -162,10 +162,15 @@ rviz.launch：
 - 执行 `roslaunch payload_planner replan.launch use_planner:=false`，验证 rviz.launch 自动切换至 controller_only.rviz；随后设置 use_planner:=true 确认为 sim_vis.rviz。
 阶段 6：测试与验证
 
-编译：catkin build payload_mpc_controller，确保新文件编译通过。
-解析轨迹模式测试：分别配置 circle/figure_eight/helix，检查 /mpc/reference_trajectory 与 /mpc/trajectory_predicted 话题；确认 RViz 显示符合预期。
-回归测试：use_planner=true 跑原规划流程，验证兼容性。
-建议：编写解析轨迹单元测试，验证高阶导数数值；记录仿真 bag 评估控制性能。
+刚才完成的工作：
+- 新增 `controller/payload_mpc_controller/test/reference_generator_test.cpp`，对圆、八字、螺旋三类解析轨迹的 PVAJSC 解析公式进行精确断言，覆盖轨迹结束后的导数归零与 reset 起始时间刷新逻辑。
+- 更新 `controller/payload_mpc_controller/CMakeLists.txt`，在 `CATKIN_ENABLE_TESTING` 下注册 `reference_generator_test`，将 `src/reference_generator.cpp` 纳入单元测试编译，默认引入 Eigen 与 catkin 依赖。
+
+测试方法：
+- 执行 `catkin build payload_mpc_controller`，确保控制器与新测试目标在 Release/Debug 模式下均能编译链接。
+- 执行 `catkin run_tests payload_mpc_controller --no-deps --target reference_generator_test`，检查三类解析轨迹的高阶导数断言全部通过。
+- 分别运行 `roslaunch payload_planner controller_only.launch trajectory_mode:=circle` / `figure_eight` / `helix`，在 RViz 中确认 `/mpc/reference_trajectory` 与 `/mpc/trajectory_predicted` 匹配单元测试覆盖的解析公式；随后以 `use_planner:=true` 回归原多项式轨迹流程。
+
 阶段 7：审查反馈与后续优化
 
 已纳入审查指摘内容：接口重载、FSM 新状态、参数校验、launch 条件、RViz 禁用项、轨迹公式/高阶导数修正。

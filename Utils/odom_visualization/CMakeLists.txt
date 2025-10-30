@@ -163,9 +163,8 @@ add_executable(odom_visualization src/odom_visualization.cpp src/CameraPoseVisua
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(odom_visualization
-   ${catkin_LIBRARIES}
-   ${ARMADILLO_LIBRARIES}
-   pose_utils
+  ${catkin_LIBRARIES}
+  ${ARMADILLO_LIBRARIES}
 )
 
 #############

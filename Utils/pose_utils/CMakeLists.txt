@@ -3,8 +3,8 @@ project(pose_utils)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-O3 -Wall -g")
-ADD_COMPILE_OPTIONS(-std=c++11 )
-ADD_COMPILE_OPTIONS(-std=c++14 )
+add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 find_package(catkin REQUIRED COMPONENTS
   #armadillo
@@ -26,6 +26,11 @@ include_directories(
     include
     )
 
-add_library(pose_utils 
-   ${ARMADILLO_LIBRARIES}
-   src/pose_utils.cpp)
+add_library(pose_utils
+  src/pose_utils.cpp
+)
+
+target_link_libraries(pose_utils
+  ${catkin_LIBRARIES}
+  ${ARMADILLO_LIBRARIES}
+)

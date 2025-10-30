@@ -96,3 +96,21 @@ target_link_libraries(mpc_controller_node
   # mpc_solver
   ${catkin_LIBRARIES}
 )
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(reference_generator_test
+    test/reference_generator_test.cpp
+    src/reference_generator.cpp
+  )
+  if(TARGET reference_generator_test)
+    target_include_directories(reference_generator_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/include
+      ${EIGEN3_INCLUDE_DIR}
+    )
+    target_link_libraries(reference_generator_test
+      gtest_main
+      gtest
+      ${catkin_LIBRARIES}
+    )
+  endif()
+endif()

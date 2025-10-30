@@ -280,8 +280,9 @@ class Nodelet : public nodelet::Nodelet {
  public:
   //这段代码实现了Nodelet类的onInit方法，这是ROS节点初始化的核心入口函数，负责完成仿真器的所有初始化工作
   //包括参数加载、模型创建、通信接口设置和可视化配置等。
-
-  ros::NodeHandle nh(getPrivateNodeHandle());
+  void onInit() override
+  {
+    ros::NodeHandle nh(getPrivateNodeHandle());
   // 1. 加载初始位置和姿态参数
   // - 从参数服务器加载无人机和负载的初始位置（init_x, init_y, init_z）
   // - 加载负载相对于无人机的初始位置（init_quadx, init_quady, init_quadz）
@@ -444,11 +445,11 @@ class Nodelet : public nodelet::Nodelet {
   payload_line.type = visualization_msgs::Marker::LINE_STRIP;
   payload_line.scale.x = 0.02;
   payload_line.id = (int32_t)vis_msg_.markers.size();
-  vis_msg_.markers.push_back(payload_line);
-  // drone_body.scale.y = config.arm_length;
-  // drone_body.scale.x = 0.1 * config.arm_length;
-  // vis_msg_.markers.push_back(payload);
-  };
+    vis_msg_.markers.push_back(payload_line);
+    // drone_body.scale.y = config.arm_length;
+    // drone_body.scale.x = 0.1 * config.arm_length;
+    // vis_msg_.markers.push_back(payload);
+  }
 };
 
 } // so3_quadrotor
