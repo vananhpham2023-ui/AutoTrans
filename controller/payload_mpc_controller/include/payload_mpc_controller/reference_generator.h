@@ -11,10 +11,11 @@ namespace PayloadMPC
 	public:
 		using Sample = Eigen::Matrix<double, 3, 6>;
 
-		virtual ~AnalyticTrajectory() = default;
-		virtual Sample sample(double t) const = 0;
-		virtual double getDuration() const = 0;
-		virtual void reset(double start_time) = 0;
+	virtual ~AnalyticTrajectory() = default;
+	virtual Sample sample(double t) const = 0;
+	virtual double getDuration() const = 0;
+	virtual void reset(double start_time) = 0;
+	virtual double getCycleTime() const { return std::numeric_limits<double>::infinity(); }
 	};
 
 	class CircleTrajectory final : public AnalyticTrajectory
@@ -23,8 +24,9 @@ namespace PayloadMPC
 		CircleTrajectory(double radius, double angular_velocity, Eigen::Vector2d center, double altitude);
 
 		Sample sample(double t) const override;
-		double getDuration() const override;
-		void reset(double start_time) override;
+	double getDuration() const override;
+	void reset(double start_time) override;
+double getCycleTime() const override;
 
 	private:
 		double radius_;
@@ -44,8 +46,9 @@ namespace PayloadMPC
 		FigureEightTrajectory(double radius, double angular_velocity, Eigen::Vector2d center, double altitude);
 
 		Sample sample(double t) const override;
-		double getDuration() const override;
-		void reset(double start_time) override;
+	double getDuration() const override;
+	void reset(double start_time) override;
+double getCycleTime() const override;
 
 	private:
 		double radius_;
@@ -70,8 +73,9 @@ namespace PayloadMPC
 						double revolutions);
 
 		Sample sample(double t) const override;
-		double getDuration() const override;
-		void reset(double start_time) override;
+	double getDuration() const override;
+	void reset(double start_time) override;
+double getCycleTime() const override;
 
 	private:
 		double radius_;

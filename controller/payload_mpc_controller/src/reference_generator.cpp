@@ -1,4 +1,4 @@
-#include "payload_mpc_controller/reference_generator.h"
+#include "reference_generator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -70,6 +70,11 @@ void CircleTrajectory::reset(double start_time)
 	start_time_ = start_time;
 }
 
+double CircleTrajectory::getCycleTime() const
+{
+	return (omega_ != 0.0) ? (kTwoPi / std::abs(omega_)) : kInf;
+}
+
 FigureEightTrajectory::FigureEightTrajectory(double radius, double angular_velocity, Eigen::Vector2d center, double altitude)
 	: radius_(radius),
 	  omega_(angular_velocity),
@@ -122,6 +127,11 @@ double FigureEightTrajectory::getDuration() const
 void FigureEightTrajectory::reset(double start_time)
 {
 	start_time_ = start_time;
+}
+
+double FigureEightTrajectory::getCycleTime() const
+{
+	return (omega_ != 0.0) ? (kTwoPi / std::abs(omega_)) : kInf;
 }
 
 HelixTrajectory::HelixTrajectory(double radius,
@@ -190,6 +200,11 @@ double HelixTrajectory::getDuration() const
 void HelixTrajectory::reset(double start_time)
 {
 	start_time_ = start_time;
+}
+
+double HelixTrajectory::getCycleTime() const
+{
+	return (omega_ != 0.0) ? (kTwoPi / std::abs(omega_)) : kInf;
 }
 
 } // namespace PayloadMPC

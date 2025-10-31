@@ -18,6 +18,10 @@
 #include <mavros_msgs/AttitudeTarget.h>
 #include <mavros_msgs/ESCStatus.h>
 #include "multi_optimization_based_force_estimator.hpp"
+#include <visualization_msgs/MarkerArray.h>
+#include <vector>
+#include <limits>
+#include <string>
 #include <memory>
 
 namespace PayloadMPC
@@ -98,6 +102,7 @@ namespace PayloadMPC
 	private:
 		// Subscribers and publisher.
 		ros::Publisher pub_control_command, pub_predicted_trajectory_, pub_payload_predicted_trajectory_, pub_reference_trajectory_, pub_payload_reference_trajectory_, pub_cable_;
+		ros::Publisher reference_geometry_pub_;
 		ros::Publisher pub_all_ref_data_, pub_rmse_info_;
 		State_t fsm_state; // Should only be changed in PX4CtrlFSM::process() function!
 
@@ -122,6 +127,15 @@ namespace PayloadMPC
 		Eigen::Matrix<real_t, kStateSize, kSamples + 1> mpc_predicted_states_;
 		Eigen::Matrix<real_t, kInputSize, kSamples> mpc_predicted_inputs_;
 		Eigen::Vector3d fq_, fl_;
+		double analytic_rmse_sum_quad_;
+		double analytic_rmse_sum_payload_;
+		size_t analytic_rmse_samples_;
+		int analytic_cycles_completed_;
+		int analytic_target_cycles_;
+		double analytic_cycle_time_;
+		double analytic_total_duration_;
+		double analytic_next_cycle_time_;
+		bool analytic_rmse_reported_;
 
 		void setEstimateState(const Odom_Data_t &odom_est_state, const Odom_Data_t &odom_payload_state, const Imu_Data_t &cable_info_data);
 		void setForceEstimation();
@@ -132,6 +146,14 @@ namespace PayloadMPC
 
 		void publish_bodyrate_ctrl(const Eigen::Ref<const Eigen::Matrix<real_t, kInputSize, 1>> predicted_input,
 								   const ros::Time &stamp);
+
+		std::vector<geometry_msgs::PoseStamped> reference_history_;
+		std::vector<geometry_msgs::PoseStamped> reference_payload_history_;
+		std::vector<geometry_msgs::PoseStamped> actual_history_quad_;
+		std::vector<geometry_msgs::PoseStamped> actual_history_payload_;
+		bool analytic_plot_generated_;
+
+		void finalizeAnalyticRun(double quad_rmse, double payload_rmse);
 
 		// ---- tools ----
 		void printandresetRMSE();

@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   quadrotor_msgs
   uav_utils
+  roslib
 
 )
 
@@ -105,6 +106,7 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET reference_generator_test)
     target_include_directories(reference_generator_test PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/include
+      ${CMAKE_CURRENT_SOURCE_DIR}/include/payload_mpc_controller
       ${EIGEN3_INCLUDE_DIR}
     )
     target_link_libraries(reference_generator_test

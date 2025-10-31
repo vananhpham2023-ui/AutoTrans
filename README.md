@@ -21,6 +21,7 @@
    ```bash
    sudo apt update
    sudo apt install ros-"${ROS_DISTRO}"-mavros-msgs
+   sudo apt install python3-setuptools   # 提供 catkin 工具所需的 pkg_resources
    ```
    可选：若编译时看到 PCL 关于 `pcap/png/libusb` 的 WARNING，可以安装 `libpcap-dev libpng-dev libusb-1.0-0-dev` 后重新编译。
 3. **创建工作空间**
@@ -63,11 +64,11 @@
 ```bash
 roslaunch payload_planner controller_only.launch trajectory_mode:=helix
 ```
-- 支持 `trajectory_mode:=circle|figure_eight|helix`；半径、角速度、中心等均可通过等名参数覆盖。
+- 支持 `trajectory_mode:=circle|figure_eight|helix`；半径、角速度、中心等均可通过等名参数覆盖，若需自定义解析轨迹起点，可附加 `init_x/init_y/init_z`。
 - 运行时观测：
   - `rostopic echo /mpc_controller_node/mpc/reference_trajectory`
   - `rostopic echo /mpc_controller_node/mpc/trajectory_predicted`
-  - RViz 自动加载 `controller_only.rviz`，仅保留控制相关显示。
+  - RViz 自动加载 `controller_only.rviz`，仅保留控制相关显示，`Geometry` MarkerArray 会渲染预测（蓝色）与参考（黄色/红色）无人机、载荷及缆绳模型；解析模式运行 10 个周期后，日志会输出无人机和载荷的 RMSE。
 - 想要在线切换轨迹，可执行：
   ```bash
   rosparam set /mpc_controller_node/reference/mode circle

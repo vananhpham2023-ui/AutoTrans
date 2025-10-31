@@ -13,6 +13,14 @@
 #include "geometry_msgs/Accel.h"
 #include "std_msgs/Float64MultiArray.h"
 #include "visualization_msgs/Marker.h"
+#include <std_srvs/Empty.h>
+#include <ros/package.h>
+#include <fstream>
+#include <sstream>
+#include <sys/stat.h>
+#include <cstdlib>
+#include <cerrno>
+#include <Eigen/Geometry>
 #include <cmath>
 using namespace std;
 using namespace uav_utils;
@@ -41,36 +49,111 @@ namespace PayloadMPC
 			nh_.advertise<nav_msgs::Path>("mpc/reference_trajectory", 1);
 		pub_payload_reference_trajectory_ =
 			nh_.advertise<nav_msgs::Path>("mpc/reference_payload_trajectory", 1);
-		controller_.resetThrustMapping();
+		reference_geometry_pub_ =
+			nh_.advertise<visualization_msgs::MarkerArray>("mpc/reference_geometry", 1);
+	controller_.resetThrustMapping();
 
-		pub_force_marker_ = nh_.advertise<visualization_msgs::Marker>("mpc/force_marker", 1);
-		pub_force_ = nh_.advertise<geometry_msgs::Accel>("mpc/force", 1);
+	pub_force_marker_ = nh_.advertise<visualization_msgs::Marker>("mpc/force_marker", 1);
+	pub_force_ = nh_.advertise<geometry_msgs::Accel>("mpc/force", 1);
 
-		pub_cable_ = nh_.advertise<geometry_msgs::PoseStamped>("mpc/cable_dir_reference", 1);
+	pub_cable_ = nh_.advertise<geometry_msgs::PoseStamped>("mpc/cable_dir_reference", 1);
 
-		pub_rmse_info_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/rmse_info", 1);
+	pub_rmse_info_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/rmse_info", 1);
+	reference_geometry_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("mpc/reference_geometry", 1);
+	analytic_rmse_sum_quad_ = 0.0;
+	analytic_rmse_sum_payload_ = 0.0;
+	analytic_rmse_samples_ = 0;
+	analytic_cycles_completed_ = 0;
+	analytic_target_cycles_ = 10;
+	analytic_cycle_time_ = std::numeric_limits<double>::infinity();
+	analytic_total_duration_ = std::numeric_limits<double>::infinity();
+	analytic_next_cycle_time_ = std::numeric_limits<double>::infinity();
+	analytic_rmse_reported_ = false;
+	analytic_plot_generated_ = false;
+	actual_history_quad_.clear();
+	actual_history_payload_.clear();
 
-		force_estimator_.init(params_);
-	}
+	force_estimator_.init(params_);
+}
 
 	void MPCFSM::setAnalyticTrajectory(std::unique_ptr<AnalyticTrajectory> trajectory)
 	{
 		analytic_traj_ = std::move(trajectory);
-		if (analytic_traj_)
+	if (analytic_traj_)
+	{
+		analytic_traj_->reset(0.0);
+		analytic_start_time_ = ros::Time::now();
+			reference_history_.clear();
+			reference_payload_history_.clear();
+			actual_history_quad_.clear();
+			actual_history_payload_.clear();
+			analytic_plot_generated_ = false;
+		analytic_rmse_sum_quad_ = 0.0;
+		analytic_rmse_sum_payload_ = 0.0;
+		analytic_rmse_samples_ = 0;
+		analytic_cycles_completed_ = 0;
+		analytic_rmse_reported_ = false;
+		analytic_cycle_time_ = analytic_traj_->getCycleTime();
+		analytic_total_duration_ = analytic_traj_->getDuration();
+		analytic_target_cycles_ = 10;
+		if (std::isfinite(analytic_cycle_time_) && analytic_cycle_time_ > 0.0)
 		{
-			analytic_traj_->reset(0.0);
-			analytic_start_time_ = ros::Time::now();
+			if (std::isfinite(analytic_total_duration_))
+			{
+				double available = analytic_total_duration_ / analytic_cycle_time_;
+				int available_int = static_cast<int>(std::floor(available + 1e-6));
+				if (available_int <= 0)
+					available_int = 1;
+				analytic_target_cycles_ = std::min(analytic_target_cycles_, available_int);
+			}
+			analytic_next_cycle_time_ = analytic_cycle_time_;
 		}
+		else
+		{
+			analytic_cycle_time_ = std::numeric_limits<double>::infinity();
+			analytic_next_cycle_time_ = analytic_total_duration_;
+			if (!std::isfinite(analytic_next_cycle_time_) || analytic_next_cycle_time_ <= 0.0)
+			{
+				analytic_next_cycle_time_ = std::numeric_limits<double>::infinity();
+			}
+		}
+		if (analytic_target_cycles_ <= 0)
+		{
+			analytic_target_cycles_ = 1;
+		}
+	}
 	}
 
 	void MPCFSM::resetAnalyticStart(const ros::Time &stamp)
 	{
 		analytic_start_time_ = stamp;
-		if (analytic_traj_)
-		{
-			analytic_traj_->reset(0.0);
-		}
+	if (analytic_traj_)
+	{
+		analytic_traj_->reset(0.0);
 	}
+	reference_history_.clear();
+	reference_payload_history_.clear();
+	analytic_rmse_sum_quad_ = 0.0;
+	analytic_rmse_sum_payload_ = 0.0;
+	analytic_rmse_samples_ = 0;
+	analytic_cycles_completed_ = 0;
+	analytic_rmse_reported_ = false;
+	analytic_plot_generated_ = false;
+	actual_history_quad_.clear();
+	actual_history_payload_.clear();
+	if (std::isfinite(analytic_cycle_time_) && analytic_cycle_time_ > 0.0)
+	{
+		analytic_next_cycle_time_ = analytic_cycle_time_;
+	}
+	else if (std::isfinite(analytic_total_duration_) && analytic_total_duration_ > 0.0)
+	{
+		analytic_next_cycle_time_ = analytic_total_duration_;
+	}
+	else
+	{
+		analytic_next_cycle_time_ = std::numeric_limits<double>::infinity();
+	}
+}
 
 	/*
 			Finite State Machine
@@ -408,13 +491,43 @@ namespace PayloadMPC
 				return analytic_traj_->sample(query_t);
 			};
 
-			controller_.setAnalyticReference(sampler, traj_time, hover_yaw_);
-			controller_.execMPC(est_state_, mpc_predicted_states_, mpc_predicted_inputs_);
+		controller_.setAnalyticReference(sampler, traj_time, hover_yaw_);
+		controller_.execMPC(est_state_, mpc_predicted_states_, mpc_predicted_inputs_);
 
-			const double duration = analytic_traj_->getDuration();
-			if (std::isfinite(duration) && traj_time >= duration)
+		Eigen::Vector3d quad_actual(est_state_(kPosX), est_state_(kPosY), est_state_(kPosZ));
+		Eigen::Vector3d payload_actual(est_state_(kPayloadX), est_state_(kPayloadY), est_state_(kPayloadZ));
+		Eigen::Vector3d quad_ref(controller_.reference_states_(kPosX, 0), controller_.reference_states_(kPosY, 0), controller_.reference_states_(kPosZ, 0));
+		Eigen::Vector3d payload_ref(controller_.reference_states_(kPayloadX, 0), controller_.reference_states_(kPayloadY, 0), controller_.reference_states_(kPayloadZ, 0));
+		analytic_rmse_sum_quad_ += (quad_actual - quad_ref).squaredNorm();
+		analytic_rmse_sum_payload_ += (payload_actual - payload_ref).squaredNorm();
+		analytic_rmse_samples_++;
+		if (std::isfinite(analytic_cycle_time_) && analytic_cycle_time_ > 0.0)
+		{
+			while (!analytic_rmse_reported_ && analytic_cycles_completed_ < analytic_target_cycles_ && traj_time >= analytic_next_cycle_time_)
 			{
-				ROS_INFO_THROTTLE(5.0, "[MPCctrl] ANALYTIC trajectory reached duration %.2f s, holding terminal state.", duration);
+				analytic_cycles_completed_++;
+				analytic_next_cycle_time_ += analytic_cycle_time_;
+			}
+		}
+		else if (std::isfinite(analytic_total_duration_) && traj_time >= analytic_total_duration_)
+		{
+			analytic_cycles_completed_ = analytic_target_cycles_;
+		}
+	if (!analytic_rmse_reported_ && analytic_rmse_samples_ > 0 && (analytic_cycles_completed_ >= analytic_target_cycles_ || (std::isfinite(analytic_total_duration_) && traj_time >= analytic_total_duration_)))
+	{
+		double quad_rmse = std::sqrt(analytic_rmse_sum_quad_ / static_cast<double>(analytic_rmse_samples_));
+		double payload_rmse = std::sqrt(analytic_rmse_sum_payload_ / static_cast<double>(analytic_rmse_samples_));
+		ROS_INFO_STREAM("[MPCctrl] ANALYTIC RMSE (" << analytic_cycles_completed_ << "/" << analytic_target_cycles_
+				       << " cycles) quad=" << quad_rmse << " m, payload=" << payload_rmse
+				       << " m over " << analytic_rmse_samples_ << " samples.");
+		analytic_rmse_reported_ = true;
+		finalizeAnalyticRun(quad_rmse, payload_rmse);
+	}
+
+		const double duration = analytic_traj_->getDuration();
+		if (std::isfinite(duration) && traj_time >= duration)
+		{
+			ROS_INFO_THROTTLE(5.0, "[MPCctrl] ANALYTIC trajectory reached duration %.2f s, holding terminal state.", duration);
 			}
 			else
 			{
@@ -718,13 +831,14 @@ namespace PayloadMPC
 		geometry_msgs::PoseStamped reference_pose;
 		geometry_msgs::PoseStamped reference_payload_pose;
 		// std::cout << "pub_prediction" << std:: endl;
-		cable_dir_ref.header = path_msg.header;
-		cable_dir_ref.pose.position.x = reference_states(kCableX, 0);
-		cable_dir_ref.pose.position.y = reference_states(kCableY, 0);
-		cable_dir_ref.pose.position.z = reference_states(kCableZ, 0);
-		for (int i = 0; i < kSamples + 1; i++)
-		{
-			// pub predicted
+	cable_dir_ref.header = path_msg.header;
+	cable_dir_ref.pose.position.x = reference_states(kCableX, 0);
+	cable_dir_ref.pose.position.y = reference_states(kCableY, 0);
+	cable_dir_ref.pose.position.z = reference_states(kCableZ, 0);
+
+	for (int i = 0; i < kSamples + 1; i++)
+	{
+		// pub predicted
 			pose.header.stamp = time + ros::Duration(i * dt);
 			pose.header.seq = i;
 			payload_pose.header = pose.header;
@@ -772,11 +886,172 @@ namespace PayloadMPC
 			reference_payload_path_msg.poses.push_back(reference_payload_pose);
 		}
 
-		pub_predicted_trajectory_.publish(path_msg);
-		pub_payload_predicted_trajectory_.publish(payload_path_msg);
-		pub_reference_trajectory_.publish(reference_path_msg);
-		pub_payload_reference_trajectory_.publish(reference_payload_path_msg);
-		pub_cable_.publish(cable_dir_ref);
+	if (exec_traj_state_ != ANALYTIC)
+	{
+		reference_history_.clear();
+		reference_payload_history_.clear();
+		actual_history_quad_.clear();
+		actual_history_payload_.clear();
+	}
+	else
+	{
+		reference_history_.reserve(reference_history_.size() + 1);
+		reference_payload_history_.reserve(reference_payload_history_.size() + 1);
+	}
+
+	if (!reference_path_msg.poses.empty())
+	{
+		const auto &front = reference_path_msg.poses.front();
+		bool append_sample = true;
+		if (!reference_history_.empty())
+		{
+			const auto &last = reference_history_.back();
+			double dx = front.pose.position.x - last.pose.position.x;
+			double dy = front.pose.position.y - last.pose.position.y;
+			double dz = front.pose.position.z - last.pose.position.z;
+			if ((dx * dx + dy * dy + dz * dz) < 1e-6)
+			{
+				append_sample = false;
+			}
+		}
+		if (append_sample)
+		{
+			reference_history_.push_back(front);
+			reference_payload_history_.push_back(reference_payload_path_msg.poses.front());
+		}
+	}
+
+	nav_msgs::Path reference_full_msg = reference_path_msg;
+	nav_msgs::Path reference_payload_full_msg = reference_payload_path_msg;
+	reference_full_msg.header = reference_path_msg.header;
+	reference_payload_full_msg.header = reference_payload_path_msg.header;
+
+	if (!reference_history_.empty())
+	{
+		reference_full_msg.poses.assign(reference_history_.begin(), reference_history_.end());
+		reference_payload_full_msg.poses.assign(reference_payload_history_.begin(), reference_payload_history_.end());
+		if (reference_path_msg.poses.size() > 1)
+		{
+			reference_full_msg.poses.insert(reference_full_msg.poses.end(), reference_path_msg.poses.begin() + 1, reference_path_msg.poses.end());
+			reference_payload_full_msg.poses.insert(reference_payload_full_msg.poses.end(), reference_payload_path_msg.poses.begin() + 1, reference_payload_path_msg.poses.end());
+		}
+	}
+
+	if (exec_traj_state_ == ANALYTIC)
+	{
+		auto append_actual = [](std::vector<geometry_msgs::PoseStamped> &history, const geometry_msgs::PoseStamped &pose) {
+			if (history.empty())
+			{
+				history.push_back(pose);
+				return;
+			}
+			const auto &last = history.back();
+			double dx = pose.pose.position.x - last.pose.position.x;
+			double dy = pose.pose.position.y - last.pose.position.y;
+			double dz = pose.pose.position.z - last.pose.position.z;
+			if ((dx * dx + dy * dy + dz * dz) > 1e-6)
+			{
+				history.push_back(pose);
+			}
+		};
+
+		geometry_msgs::PoseStamped actual_quad_pose;
+		actual_quad_pose.header = path_msg.header;
+		actual_quad_pose.header.stamp = time;
+		actual_quad_pose.pose.position.x = est_state_(kPosX);
+		actual_quad_pose.pose.position.y = est_state_(kPosY);
+		actual_quad_pose.pose.position.z = est_state_(kPosZ);
+		actual_quad_pose.pose.orientation.w = est_state_(kOriW);
+		actual_quad_pose.pose.orientation.x = est_state_(kOriX);
+		actual_quad_pose.pose.orientation.y = est_state_(kOriY);
+		actual_quad_pose.pose.orientation.z = est_state_(kOriZ);
+		append_actual(actual_history_quad_, actual_quad_pose);
+
+		geometry_msgs::PoseStamped actual_payload_pose;
+		actual_payload_pose.header = path_msg.header;
+		actual_payload_pose.header.stamp = time;
+		actual_payload_pose.pose.position.x = est_state_(kPayloadX);
+		actual_payload_pose.pose.position.y = est_state_(kPayloadY);
+		actual_payload_pose.pose.position.z = est_state_(kPayloadZ);
+		actual_payload_pose.pose.orientation.w = 1.0;
+		actual_payload_pose.pose.orientation.x = 0.0;
+		actual_payload_pose.pose.orientation.y = 0.0;
+		actual_payload_pose.pose.orientation.z = 0.0;
+		append_actual(actual_history_payload_, actual_payload_pose);
+	}
+
+	pub_predicted_trajectory_.publish(path_msg);
+	pub_payload_predicted_trajectory_.publish(payload_path_msg);
+	pub_reference_trajectory_.publish(reference_full_msg);
+	pub_payload_reference_trajectory_.publish(reference_payload_full_msg);
+	pub_cable_.publish(cable_dir_ref);
+
+	visualization_msgs::MarkerArray geometry_markers;
+	geometry_markers.markers.reserve(6);
+
+	auto make_sphere_marker = [&](int id, const std::string &ns, const Eigen::Vector3d &pos, const Eigen::Quaterniond &quat,
+			 float r, float g, float b, float a, double scale) {
+		visualization_msgs::Marker marker;
+		marker.header = path_msg.header;
+		marker.ns = ns;
+		marker.id = id;
+		marker.type = visualization_msgs::Marker::SPHERE;
+		marker.action = visualization_msgs::Marker::ADD;
+		marker.pose.position.x = pos.x();
+		marker.pose.position.y = pos.y();
+		marker.pose.position.z = pos.z();
+		marker.pose.orientation.w = quat.w();
+		marker.pose.orientation.x = quat.x();
+		marker.pose.orientation.y = quat.y();
+		marker.pose.orientation.z = quat.z();
+		marker.scale.x = marker.scale.y = marker.scale.z = scale;
+		marker.color.r = r;
+		marker.color.g = g;
+		marker.color.b = b;
+		marker.color.a = a;
+		return marker;
+	};
+
+	auto make_cable_marker = [&](int id, const std::string &ns, const Eigen::Vector3d &start, const Eigen::Vector3d &end,
+		 float r, float g, float b, float a) {
+		visualization_msgs::Marker marker;
+		marker.header = path_msg.header;
+		marker.ns = ns;
+		marker.id = id;
+		marker.type = visualization_msgs::Marker::LINE_STRIP;
+		marker.action = visualization_msgs::Marker::ADD;
+		marker.scale.x = 0.02;
+		marker.color.r = r;
+		marker.color.g = g;
+		marker.color.b = b;
+		marker.color.a = a;
+		geometry_msgs::Point p;
+		p.x = start.x();
+		p.y = start.y();
+		p.z = start.z();
+		marker.points.push_back(p);
+		p.x = end.x();
+		p.y = end.y();
+		p.z = end.z();
+		marker.points.push_back(p);
+		return marker;
+	};
+
+	Eigen::Vector3d predicted_quad(predicted_traj(kPosX, 0), predicted_traj(kPosY, 0), predicted_traj(kPosZ, 0));
+	Eigen::Vector3d predicted_payload(predicted_traj(kPayloadX, 0), predicted_traj(kPayloadY, 0), predicted_traj(kPayloadZ, 0));
+	Eigen::Quaterniond predicted_quat(predicted_traj(kOriW, 0), predicted_traj(kOriX, 0), predicted_traj(kOriY, 0), predicted_traj(kOriZ, 0));
+	Eigen::Vector3d reference_quad(reference_states(kPosX, 0), reference_states(kPosY, 0), reference_states(kPosZ, 0));
+	Eigen::Vector3d reference_payload(reference_states(kPayloadX, 0), reference_states(kPayloadY, 0), reference_states(kPayloadZ, 0));
+	Eigen::Quaterniond reference_quat(reference_states(kOriW, 0), reference_states(kOriX, 0), reference_states(kOriY, 0), reference_states(kOriZ, 0));
+
+	geometry_markers.markers.push_back(make_sphere_marker(0, "predicted", predicted_quad, predicted_quat, 0.2f, 0.6f, 1.0f, 0.9f, 0.4));
+	geometry_markers.markers.push_back(make_sphere_marker(1, "predicted", predicted_payload, Eigen::Quaterniond::Identity(), 1.0f, 0.5f, 0.2f, 0.9f, 0.28));
+	geometry_markers.markers.push_back(make_cable_marker(2, "predicted", predicted_quad, predicted_payload, 0.2f, 0.6f, 1.0f, 0.9f));
+	geometry_markers.markers.push_back(make_sphere_marker(3, "reference", reference_quad, reference_quat, 1.0f, 0.9f, 0.2f, 0.8f, 0.35));
+	geometry_markers.markers.push_back(make_sphere_marker(4, "reference", reference_payload, Eigen::Quaterniond::Identity(), 1.0f, 0.3f, 0.3f, 0.8f, 0.24));
+	geometry_markers.markers.push_back(make_cable_marker(5, "reference", reference_quad, reference_payload, 1.0f, 0.9f, 0.2f, 0.8f));
+
+	reference_geometry_pub_.publish(geometry_markers);
 
 		nav_msgs::Path all_ref;
 		all_ref.header = path_msg.header;
@@ -1027,5 +1302,104 @@ namespace PayloadMPC
 		// if (params_.print_dbg)
 		// 	printf("reboot result=%d(uint8_t), success=%d(uint8_t)\n", reboot_srv.response.result, reboot_srv.response.success);
 	}
-
+void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
+{
+	if (analytic_plot_generated_)
+	{
+		return;
+	}
+	analytic_plot_generated_ = true;
+	std::string package_path = ros::package::getPath("payload_mpc_controller");
+	std::string plot_dir = package_path + "/plots";
+	if (!plot_dir.empty())
+	{
+		if (::mkdir(plot_dir.c_str(), 0755) != 0 && errno != EEXIST)
+		{
+			ROS_WARN_STREAM("[MPCctrl] Failed to create plot directory: " << plot_dir);
+		}
+	}
+	std::string csv_path = plot_dir + "/analytic_xy.csv";
+	std::ofstream csv(csv_path.c_str());
+	if (!csv.is_open())
+	{
+		ROS_WARN_STREAM("[MPCctrl] Unable to write plot data to " << csv_path);
+	}else{
+		csv << "quad_ref_x,quad_ref_y,quad_actual_x,quad_actual_y,payload_ref_x,payload_ref_y,payload_actual_x,payload_actual_y\n";
+		size_t max_len = std::max(reference_history_.size(), actual_history_quad_.size());
+		max_len = std::max(max_len, reference_payload_history_.size());
+		max_len = std::max(max_len, actual_history_payload_.size());
+		for (size_t i = 0; i < max_len; ++i)
+		{
+			auto fetch = [](const std::vector<geometry_msgs::PoseStamped> &hist, size_t idx) -> std::pair<bool, const geometry_msgs::PoseStamped *>
+			{
+				if (idx < hist.size())
+				{
+					return {true, &hist[idx]};
+				}
+				return {false, nullptr};
+			};
+			auto quad_ref = fetch(reference_history_, i);
+			auto quad_act = fetch(actual_history_quad_, i);
+			auto payload_ref = fetch(reference_payload_history_, i);
+			auto payload_act = fetch(actual_history_payload_, i);
+			auto emit = [&](const std::pair<bool, const geometry_msgs::PoseStamped *> &item, char axis) {
+				if (!item.first)
+				{
+					csv << "nan";
+				}
+				else
+				{
+					const auto &pose = *item.second;
+					switch (axis)
+					{
+					case 'x': csv << pose.pose.position.x; break;
+					case 'y': csv << pose.pose.position.y; break;
+					default: csv << "nan"; break;
+					}
+				}
+			};
+			emit(quad_ref, 'x'); csv << ',';
+			emit(quad_ref, 'y'); csv << ',';
+			emit(quad_act, 'x'); csv << ',';
+			emit(quad_act, 'y'); csv << ',';
+			emit(payload_ref, 'x'); csv << ',';
+			emit(payload_ref, 'y'); csv << ',';
+			emit(payload_act, 'x'); csv << ',';
+			emit(payload_act, 'y'); csv << '\n';
+		}
+		csv.close();
+	}
+	std::string script = package_path + "/scripts/plot_xy.py";
+	std::string svg_path = plot_dir + "/analytic_xy.svg";
+	std::ostringstream cmd;
+	cmd << "python3 " << script << ' ' << csv_path << ' ' << quad_rmse << ' ' << payload_rmse << ' ' << svg_path;
+	int ret = std::system(cmd.str().c_str());
+	if (ret != 0)
+	{
+		ROS_WARN_STREAM("[MPCctrl] Plot script returned code " << ret);
+	}
+	else
+	{
+		ROS_INFO_STREAM("[MPCctrl] Analytical XY plot saved to " << svg_path);
+	}
+	std_srvs::Empty srv;
+	ros::ServiceClient quit_client = nh_.serviceClient<std_srvs::Empty>("/rviz/force_quit");
+	bool rviz_closed = false;
+	if (quit_client.waitForExistence(ros::Duration(0.5)))
+	{
+		if (quit_client.call(srv))
+		{
+			rviz_closed = true;
+		}
+	}
+	if (!rviz_closed)
+	{
+		int kill_ret = std::system("rosnode kill /rviz >/dev/null 2>&1");
+		if (kill_ret != 0)
+		{
+			ROS_WARN_STREAM("[MPCctrl] Unable to close RViz automatically. Please close it manually.");
+		}
+	}
 }
+
+} // namespace PayloadMPC

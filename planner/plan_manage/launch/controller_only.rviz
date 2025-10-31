@@ -104,6 +104,12 @@ Visualization Manager:
           Pose Style: None
           Topic: /mpc_controller_node/mpc/payload_trajectory_predicted
           Value: true
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /mpc_controller_node/mpc/reference_geometry
+          Name: Geometry
+          Queue Size: 1
+          Value: true
       Enabled: true
       Name: Controller
       Value: true

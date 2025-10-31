@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <Eigen/Dense>
 
-#include "payload_mpc_controller/reference_generator.h"
+#include "reference_generator.h"
 
 namespace PayloadMPC
 {

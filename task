@@ -57,7 +57,7 @@ Launch 条件示例：
 </node>
 测试与验证
 
-编译：catkin build payload_mpc_controller，确保新增 reference_generator.cpp 被纳入构建；在 use_planner=false 场景下无未定义引用。
+编译：catkin build，确保新增 reference_generator.cpp 被纳入构建；在 use_planner=false 场景下无未定义引用。
 功能测试：分别以 trajectory_mode=circle/figure_eight/helix 启动，检查 /mpc/reference_trajectory 与 /mpc/trajectory_predicted 话题；确认无人机-负载路径符合预期（可在 RViz 中查看或录制 bag 验证 P、V 曲线）。
 回归：use_planner=true 时完整启动规划流程，确保旧消息路径正常工作；切换模式后能稳定返回悬停状态。
 视觉确认：加载 controller_only.rviz 时无遮挡点云，Controller 组 Marker 正常显示；在 sim_vis.rviz 下保持旧效果。
@@ -163,15 +163,20 @@ rviz.launch：
 阶段 6：测试与验证
 
 刚才完成的工作：
-- `catkin build payload_mpc_controller` 确认 `reference_generator.cpp` 与所有控制器目标在 Release 模式下正常编译链接。
-- 完成 GTest 场景：`controller/payload_mpc_controller/test/reference_generator_test.cpp` 校验圆/八字/螺旋三种解析轨迹的 PVAJSC 公式、终端冻结与 reset 行为；`controller/payload_mpc_controller/CMakeLists.txt` 调整测试目标的包含路径、`gtest_main` 链接。
-- 执行 `catkin build payload_mpc_controller --no-deps --catkin-make-args reference_generator_test` 后运行 `devel/.private/payload_mpc_controller/lib/payload_mpc_controller/reference_generator_test`，全部 3 项断言通过。
+- `catkin build payload_mpc_controller` 验证控制器及解析轨迹模块在工作空间内可正常编译。
+- 新增 `controller/payload_mpc_controller/test/reference_generator_test.cpp` 覆盖圆/八字/螺旋解析轨迹的 PVAJSC 公式、终端冻结与 `reset()` 行为；对应的 CMake 调整测试目标的 include 路径并显式链接 `gtest_main`。
+- 通过 `catkin build payload_mpc_controller --no-deps --catkin-make-args reference_generator_test` 生成测试二进制，执行 `devel/.private/payload_mpc_controller/lib/payload_mpc_controller/reference_generator_test` 获取 3/3 PASS。
+- `MPCFSM::publishPrediction` 维护参考轨迹历史并发布 `mpc/reference_geometry` MarkerArray，RViz 中可同时查看完整参考路径以及当前预测/参考的无人机、载荷、缆绳图形。
+- `controller_only.launch` 默认同步模拟器初始状态到解析轨迹起点，`controller_only.rviz`/`sim_vis.rviz` 新增 `Geometry` 显示项。
 
 测试方法：
-- 后续需人工完成的仿真验证：
-  - `roslaunch payload_planner controller_only.launch trajectory_mode:=circle|figure_eight|helix`，通过 `/mpc/reference_trajectory` 与 `/mpc/trajectory_predicted` 话题或 RViz 观测轨迹一致性。
-  - `roslaunch payload_planner replan.launch use_planner:=true`，确认模式切换时 FSM 能从 `ANALYTIC` 平滑返回 `HOVER`，规划消息链路保持正常。
-  - RViz 视觉检查：`rviz.launch use_planner:=false` 应只保留 Controller 组 Marker；`use_planner:=true` 仍显示原障碍物与规划结果。
+- 依赖准备：`sudo apt install python3-setuptools`，保证 `catkin` 命令可用。
+- 编译：`catkin build payload_mpc_controller`（或 `catkin build`）确认解析轨迹代码纳入构建。
+- 单元测试：`catkin build payload_mpc_controller --no-deps --catkin-make-args reference_generator_test`，随后运行 `devel/.private/payload_mpc_controller/lib/payload_mpc_controller/reference_generator_test`，检查断言结果。
+- 仿真验证（执行前 `source ~/autotrans_ws/devel/setup.bash`）：
+  - `roslaunch payload_planner controller_only.launch trajectory_mode:=circle|figure_eight|helix`，对比 `/mpc/reference_trajectory` 与 `/mpc/trajectory_predicted` 及 RViz 曲线。运行约 10 个周期后关注控制节点日志中的“ANALYTIC RMSE”输出，记录无人机与载荷的轨迹跟踪误差。
+  - `roslaunch payload_planner replan.launch use_planner:=true`，验证模式切换与悬停恢复。
+  - `roslaunch payload_planner rviz.launch use_planner:=false` 与 `use_planner:=true`，确认 `Geometry` MarkerArray 中的无人机/载荷/缆绳模型随时间更新且参考路径完整保留。
 
 阶段 7：审查反馈与后续优化
 

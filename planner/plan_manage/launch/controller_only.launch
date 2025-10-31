@@ -17,6 +17,9 @@
   <arg name="helix_base_altitude" default="1.5"/>
   <arg name="helix_vertical_rate" default="0.4"/>
   <arg name="helix_revolutions" default="3.0"/>
+  <arg name="init_x" default="5.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_z" default="2.0"/>
 
   <include file="$(find payload_planner)/launch/replan.launch">
     <arg name="use_planner" value="false"/>
@@ -38,5 +41,8 @@
     <arg name="helix_base_altitude" value="$(arg helix_base_altitude)"/>
     <arg name="helix_vertical_rate" value="$(arg helix_vertical_rate)"/>
     <arg name="helix_revolutions" value="$(arg helix_revolutions)"/>
+    <arg name="init_x" value="$(arg init_x)"/>
+    <arg name="init_y" value="$(arg init_y)"/>
+    <arg name="init_z" value="$(arg init_z)"/>
   </include>
 </launch>

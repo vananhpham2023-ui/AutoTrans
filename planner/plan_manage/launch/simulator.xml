@@ -17,8 +17,8 @@
     <param name="init_z" value="$(arg init_z)"/>
 
     <param name="init_quadx" value="$(arg init_x)"/>
-    <param name="init_quady" value="0.0"/>
-    <param name="init_quadz" value="1.4"/>
+    <param name="init_quady" value="$(arg init_y)"/>
+    <param name="init_quadz" value="$(arg init_z)"/>
     <rosparam file="$(find uav_simulator)/config/so3_quadrotor.yaml"/>
     <remap from="~odom" to="$(arg odometry_topic)"/>
     <remap from="~imu" to="imu" />
