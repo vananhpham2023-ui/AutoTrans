@@ -34,7 +34,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Group
       Displays:
-        - Class: rviz/MarkerArray
+        - Class: rviz/Marker
           Enabled: true
           Marker Topic: /mpc_controller_node/mpc/force_marker
           Name: ForceMarker

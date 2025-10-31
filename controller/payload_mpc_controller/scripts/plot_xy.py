@@ -4,9 +4,10 @@ import os
 import csv
 import math
 
-WIDTH = 860
+WIDTH = 1000
 HEIGHT = 720
 MARGIN = 60
+LEGEND_SPACE = 220
 LINE_WIDTH = 2.5
 COLORS = {
     "quad_ref": "#FFD43B",
@@ -78,8 +79,10 @@ if max_y - min_y < 1e-6:
     max_y += 0.5
     min_y -= 0.5
 
-scale_x = (WIDTH - 2 * MARGIN) / (max_x - min_x)
-scale_y = (HEIGHT - 2 * MARGIN) / (max_y - min_y)
+plot_width = WIDTH - 2 * MARGIN - LEGEND_SPACE
+plot_height = HEIGHT - 2 * MARGIN
+scale_x = plot_width / (max_x - min_x)
+scale_y = plot_height / (max_y - min_y)
 
 def to_svg(x, y):
     sx = MARGIN + (x - min_x) * scale_x
@@ -93,7 +96,7 @@ svg = []
 svg.append('<?xml version="1.0" encoding="UTF-8"?>')
 svg.append(f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">')
 svg.append('<rect x="0" y="0" width="100%" height="100%" fill="#FFFFFF"/>')
-svg.append(f'<rect x="{MARGIN}" y="{MARGIN}" width="{WIDTH - 2*MARGIN}" height="{HEIGHT - 2*MARGIN}" fill="none" stroke="#E0E0E0" stroke-width="1"/>')
+svg.append(f'<rect x="{MARGIN}" y="{MARGIN}" width="{plot_width}" height="{plot_height}" fill="none" stroke="#E0E0E0" stroke-width="1"/>')
 
 for name, pts in series.items():
     if len(pts) < 2:
@@ -105,10 +108,10 @@ for name, pts in series.items():
     polyline = build_polyline(transformed)
     svg.append(f'<polyline fill="none" stroke="{color}" stroke-width="{LINE_WIDTH}"{dash_attr} points="{polyline}"/>')
 
-legend_width = 260
-legend_height = 110
-legend_x = WIDTH - MARGIN - legend_width
-legend_y = HEIGHT - MARGIN - legend_height
+legend_width = LEGEND_SPACE - 40
+legend_height = 120
+legend_x = MARGIN + plot_width + 20
+legend_y = MARGIN
 svg.append(f'<rect x="{legend_x}" y="{legend_y}" width="{legend_width}" height="{legend_height}" fill="#FFFFFF" stroke="#B0B0B0" stroke-width="1" opacity="0.9"/>')
 
 legend_items = [
@@ -117,7 +120,7 @@ legend_items = [
     ("Payload Ref", "payload_ref"),
     ("Payload Actual", "payload_actual"),
 ]
-legend_line_y = legend_y + 20
+legend_line_y = legend_y + 25
 legend_line_x1 = legend_x + 15
 legend_line_x2 = legend_line_x1 + 50
 
@@ -129,9 +132,8 @@ for label, name in legend_items:
     svg.append(f'<text x="{legend_line_x2 + 10}" y="{legend_line_y + 5}" font-size="16" fill="#333333">{label}</text>')
     legend_line_y += 22
 
-rmse_text = f"Quad RMSE: {quad_rmse:.3f} m\nPayload RMSE: {payload_rmse:.3f} m"
-svg.append(f'<text x="{legend_x + 15}" y="{legend_y + legend_height - 35}" font-size="16" fill="#333333">Quad RMSE: {quad_rmse:.3f} m</text>')
-svg.append(f'<text x="{legend_x + 15}" y="{legend_y + legend_height - 15}" font-size="16" fill="#333333">Payload RMSE: {payload_rmse:.3f} m</text>')
+svg.append(f'<text x="{legend_x + 15}" y="{legend_y + legend_height - 40}" font-size="16" fill="#333333">Quad RMSE: {quad_rmse:.3f} m</text>')
+svg.append(f'<text x="{legend_x + 15}" y="{legend_y + legend_height - 20}" font-size="16" fill="#333333">Payload RMSE: {payload_rmse:.3f} m</text>')
 
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 with open(output_path, 'w') as f:

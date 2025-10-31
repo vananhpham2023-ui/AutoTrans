@@ -45,10 +45,11 @@
 
 2. **Stage 6 单元测试（解析轨迹）**
    ```bash
-    catkin build payload_mpc_controller
-    catkin run_tests payload_mpc_controller --no-deps --target reference_generator_test
-    catkin_test_results
+   catkin build payload_mpc_controller --no-deps --catkin-make-args reference_generator_test
+   devel/.private/payload_mpc_controller/lib/payload_mpc_controller/reference_generator_test
    ```
+   - 第一步生成并编译测试目标
+   - 第二步直接执行可执行文件获取结果（3/3 PASS 即为通过）
    测试覆盖解析轨迹的 PVAJSC 精确度、螺旋轨迹收尾导数归零以及 `reset()` 函数行为。
 
 3. **增量编译建议**
@@ -68,7 +69,8 @@ roslaunch payload_planner controller_only.launch trajectory_mode:=helix
 - 运行时观测：
   - `rostopic echo /mpc_controller_node/mpc/reference_trajectory`
   - `rostopic echo /mpc_controller_node/mpc/trajectory_predicted`
-  - RViz 自动加载 `controller_only.rviz`，仅保留控制相关显示，`Geometry` MarkerArray 会渲染预测（蓝色）与参考（黄色/红色）无人机、载荷及缆绳模型；解析模式运行 10 个周期后，日志会输出无人机和载荷的 RMSE。
+  - RViz 自动加载 `controller_only.rviz`，仅保留控制相关显示；`Geometry` MarkerArray 渲染当前（实际/预测）无人机、载荷及缆绳模型，参考轨迹保留为 Path 方便对比。
+- 解析模式运行 10 个周期后，控制节点会在日志中输出无人机/载荷的 RMSE，并在 `payload_mpc_controller/plots/` 下生成 `analytic_xy.csv` 与 `analytic_xy.svg`（图像会通过 `xdg-open` 自动弹出）。
 - 想要在线切换轨迹，可执行：
   ```bash
   rosparam set /mpc_controller_node/reference/mode circle
@@ -92,7 +94,8 @@ roslaunch payload_planner replan.launch use_planner:=true
 
 ## 验证清单
 - `catkin build` 与 `reference_generator_test` 均通过。
-- `controller_only.launch` 中 `/mpc/reference_trajectory` 与 `/mpc/trajectory_predicted` 在 RViz 中对齐，日志提示 `ANALYTIC trajectory tracking`。
+- `controller_only.launch` 下 `/mpc/reference_trajectory` 与 `/mpc/trajectory_predicted` 在 RViz 中对齐，日志提示 `ANALYTIC trajectory tracking`。
+- 运行约 10 个周期后，日志出现 `ANALYTIC RMSE (...)` 且自动生成/弹出 `analytic_xy.svg`。
 - 切回 `use_planner:=true` 后日志出现 `ANALYTIC --> HOVER`，规划器话题恢复订阅。
 - `roswtf` 与 `rostopic hz` 未报频率/连接异常。
 

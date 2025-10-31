@@ -97,6 +97,8 @@ class Quadrotor {
     }
   } state_; // 当前系统状态
   Eigen::Vector4d  input_ = Eigen::Vector4d::Zero(); // 电机输入命令
+  Eigen::Vector3d wind_quad_world_ = Eigen::Vector3d::Zero(); // 世界系下无人机位置处风速
+  Eigen::Vector3d wind_load_world_ = Eigen::Vector3d::Zero(); // 世界系下负载位置处风速
  public:
   std::default_random_engine generator; // 随机数生成器
   std::normal_distribution<double> distribution{0.0,1.0}; // 正态分布
@@ -139,6 +141,11 @@ class Quadrotor {
       input_(i) = input_(i) < config_.max_rpm ? input_(i) : config_.max_rpm;
       input_(i) = input_(i) > config_.min_rpm ? input_(i) : config_.min_rpm;
     }
+  }
+
+  inline void setWindVelocity(const Eigen::Vector3d &wind_quad_world, const Eigen::Vector3d &wind_load_world) {
+    wind_quad_world_ = wind_quad_world;
+    wind_load_world_ = wind_load_world;
   }
 
   /**
@@ -189,17 +196,30 @@ class Quadrotor {
     moments(2) = config_.km * (motor_rpm_sq(0) + motor_rpm_sq(1) - motor_rpm_sq(2) -
                         motor_rpm_sq(3));
 
+    const double kVelocityEps = 1e-6;
+
+    Eigen::Vector3d vquad_rel = state.v - wind_quad_world_;
+    double vquad_rel_norm = vquad_rel.norm();
+    Eigen::Vector3d vquad_dir = Eigen::Vector3d::Zero();
+    if (vquad_rel_norm > kVelocityEps) {
+      vquad_dir = vquad_rel / vquad_rel_norm;
+    }
     double resistancequad = 0.05 *                                        // C
                         3.14159265 * (config_.arm_length) * (config_.arm_length) * // S
-                        state.v.norm() * state.v.norm();
-    Eigen::Vector3d vquadnorm = state.v.normalized();
+                        vquad_rel_norm * vquad_rel_norm;
+
+    Eigen::Vector3d vload_rel = state.vl - wind_load_world_;
+    double vload_rel_norm = vload_rel.norm();
+    Eigen::Vector3d vload_dir = Eigen::Vector3d::Zero();
+    if (vload_rel_norm > kVelocityEps) {
+      vload_dir = vload_rel / vload_rel_norm;
+    }
     double resistanceload= 0.05 *                                        // C
                         3.14159265 * (config_.arm_length) * (config_.arm_length) * // S
-                        state.vl.norm() * state.vl.norm();
-    Eigen::Vector3d vloadnorm = state.vl.normalized();
+                        vload_rel_norm * vload_rel_norm;
 
-    Eigen::Vector3d fl = Eigen::Vector3d(0,0.0,0) + random_force(0.0)-resistanceload *vloadnorm ;
-    Eigen::Vector3d fq = Eigen::Vector3d(0.0,0,0) + random_force(0.0)-resistancequad *vquadnorm;
+    Eigen::Vector3d fl = Eigen::Vector3d(0,0.0,0) + random_force(0.0)-resistanceload *vload_dir ;
+    Eigen::Vector3d fq = Eigen::Vector3d(0.0,0,0) + random_force(0.0)-resistancequad *vquad_dir;
 
 
     double delta = (state.x - state.xl).norm() - config_.l_length;

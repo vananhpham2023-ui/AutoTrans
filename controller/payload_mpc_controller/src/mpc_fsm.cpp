@@ -987,7 +987,7 @@ namespace PayloadMPC
 	pub_cable_.publish(cable_dir_ref);
 
 	visualization_msgs::MarkerArray geometry_markers;
-	geometry_markers.markers.reserve(6);
+	geometry_markers.markers.reserve(3);
 
 	auto make_sphere_marker = [&](int id, const std::string &ns, const Eigen::Vector3d &pos, const Eigen::Quaterniond &quat,
 			 float r, float g, float b, float a, double scale) {
@@ -1037,19 +1037,13 @@ namespace PayloadMPC
 		return marker;
 	};
 
-	Eigen::Vector3d predicted_quad(predicted_traj(kPosX, 0), predicted_traj(kPosY, 0), predicted_traj(kPosZ, 0));
-	Eigen::Vector3d predicted_payload(predicted_traj(kPayloadX, 0), predicted_traj(kPayloadY, 0), predicted_traj(kPayloadZ, 0));
-	Eigen::Quaterniond predicted_quat(predicted_traj(kOriW, 0), predicted_traj(kOriX, 0), predicted_traj(kOriY, 0), predicted_traj(kOriZ, 0));
-	Eigen::Vector3d reference_quad(reference_states(kPosX, 0), reference_states(kPosY, 0), reference_states(kPosZ, 0));
-	Eigen::Vector3d reference_payload(reference_states(kPayloadX, 0), reference_states(kPayloadY, 0), reference_states(kPayloadZ, 0));
-	Eigen::Quaterniond reference_quat(reference_states(kOriW, 0), reference_states(kOriX, 0), reference_states(kOriY, 0), reference_states(kOriZ, 0));
+	Eigen::Vector3d actual_quad(est_state_(kPosX), est_state_(kPosY), est_state_(kPosZ));
+	Eigen::Vector3d actual_payload(est_state_(kPayloadX), est_state_(kPayloadY), est_state_(kPayloadZ));
+	Eigen::Quaterniond actual_quat(est_state_(kOriW), est_state_(kOriX), est_state_(kOriY), est_state_(kOriZ));
 
-	geometry_markers.markers.push_back(make_sphere_marker(0, "predicted", predicted_quad, predicted_quat, 0.2f, 0.6f, 1.0f, 0.9f, 0.4));
-	geometry_markers.markers.push_back(make_sphere_marker(1, "predicted", predicted_payload, Eigen::Quaterniond::Identity(), 1.0f, 0.5f, 0.2f, 0.9f, 0.28));
-	geometry_markers.markers.push_back(make_cable_marker(2, "predicted", predicted_quad, predicted_payload, 0.2f, 0.6f, 1.0f, 0.9f));
-	geometry_markers.markers.push_back(make_sphere_marker(3, "reference", reference_quad, reference_quat, 1.0f, 0.9f, 0.2f, 0.8f, 0.35));
-	geometry_markers.markers.push_back(make_sphere_marker(4, "reference", reference_payload, Eigen::Quaterniond::Identity(), 1.0f, 0.3f, 0.3f, 0.8f, 0.24));
-	geometry_markers.markers.push_back(make_cable_marker(5, "reference", reference_quad, reference_payload, 1.0f, 0.9f, 0.2f, 0.8f));
+	geometry_markers.markers.push_back(make_sphere_marker(0, "actual", actual_quad, actual_quat, 0.2f, 0.6f, 1.0f, 0.9f, 0.4));
+	geometry_markers.markers.push_back(make_sphere_marker(1, "actual", actual_payload, Eigen::Quaterniond::Identity(), 1.0f, 0.5f, 0.2f, 0.9f, 0.28));
+	geometry_markers.markers.push_back(make_cable_marker(2, "actual", actual_quad, actual_payload, 0.2f, 0.6f, 1.0f, 0.9f));
 
 	reference_geometry_pub_.publish(geometry_markers);
 
@@ -1381,6 +1375,12 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 	else
 	{
 		ROS_INFO_STREAM("[MPCctrl] Analytical XY plot saved to " << svg_path);
+		std::string open_cmd = std::string("xdg-open \"") + svg_path + "\" >/dev/null 2>&1 &";
+		int open_ret = std::system(open_cmd.c_str());
+		if (open_ret != 0)
+		{
+			ROS_WARN_STREAM("[MPCctrl] Failed to open plot automatically (code " << open_ret << ")");
+		}
 	}
 	std_srvs::Empty srv;
 	ros::ServiceClient quit_client = nh_.serviceClient<std_srvs::Empty>("/rviz/force_quit");
