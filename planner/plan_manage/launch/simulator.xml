@@ -6,6 +6,11 @@
   <arg name="map_size_y_"/>
   <arg name="map_size_z_"/>
   <arg name="wind_type" default="none"/>
+  <arg name="wind_constant_velocity" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_gust_axis" default="[1.0,0.0,0.0]"/>
+  <arg name="wind_dryden_sigma" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_dryden_length_scale" default="[50.0,50.0,20.0]"/>
+  <arg name="wind_override_yaml" default="{}"/>
   <arg name="odometry_topic"/>
   <arg name="payload_odometry_topic"/>
 
@@ -21,7 +26,14 @@
     <param name="init_quady" value="$(arg init_y)"/>
     <param name="init_quadz" value="$(arg init_z)"/>
     <rosparam file="$(find uav_simulator)/config/so3_quadrotor.yaml"/>
+    <!-- First load optional overrides (may define gust/dryden fields). -->
+    <rosparam param="wind" subst_value="true">$(arg wind_override_yaml)</rosparam>
+    <!-- Then set type and individual vector params to avoid being overwritten by the override blob. -->
     <param name="wind/type" value="$(arg wind_type)"/>
+    <rosparam param="wind/constant/velocity" subst_value="true">$(arg wind_constant_velocity)</rosparam>
+    <rosparam param="wind/gust/axis" subst_value="true">$(arg wind_gust_axis)</rosparam>
+    <rosparam param="wind/dryden/sigma" subst_value="true">$(arg wind_dryden_sigma)</rosparam>
+    <rosparam param="wind/dryden/length_scale" subst_value="true">$(arg wind_dryden_length_scale)</rosparam>
     <remap from="~odom" to="$(arg odometry_topic)"/>
     <remap from="~imu" to="imu" />
     <remap from="~so3cmd" to="so3cmd"/>

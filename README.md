@@ -103,13 +103,23 @@ roslaunch payload_planner replan.launch use_planner:=true
   ```bash
   # 无风
   roslaunch payload_planner controller_only.launch wind_type:=none
-  # 恒定风（幅值/方向由 YAML 配置）
-  roslaunch payload_planner controller_only.launch wind_type:=constant
-  # 周期阵风：正弦 / 方波
-  roslaunch payload_planner controller_only.launch wind_type:=gust wind/gust/mode:=sine   wind/gust/amplitude:=0.4 wind/gust/frequency:=0.3
-  roslaunch payload_planner controller_only.launch wind_type:=gust wind/gust/mode:=square wind/gust/amplitude:=0.4 wind/gust/frequency:=0.3 wind/gust/duty_cycle:=0.4
-  # Dryden 湍流
-  roslaunch payload_planner controller_only.launch wind_type:=dryden wind/dryden/sigma:=[0.5,0.5,0.2]
+  # 恒定风（幅值/方向可覆盖）
+  roslaunch payload_planner controller_only.launch \
+    wind_type:=constant \
+    wind_constant_velocity:=[5.0,0.0,0.0]
+  # 周期阵风：正弦 / 方波（使用 wind_override_yaml 覆盖具体参数）
+  roslaunch payload_planner controller_only.launch \
+    wind_type:=gust \
+    wind_gust_axis:=[0.0,1.0,0.0] \
+    wind_override_yaml:="{gust: {mode: sine, amplitude: 0.4, frequency: 0.3}}"
+  roslaunch payload_planner controller_only.launch \
+    wind_type:=gust \
+    wind_gust_axis:=[0.0,1.0,0.0] \
+    wind_override_yaml:="{gust: {mode: square, amplitude: 0.4, frequency: 0.3, duty_cycle: 0.4}}"
+  # Dryden 湍流（最小配置：直接指定 sigma）
+  roslaunch payload_planner controller_only.launch \
+    wind_type:=dryden \
+    wind_dryden_sigma:=[0.5,0.5,0.2]
   ```
 
 - 轨迹/风场组合速查（控制-only 模式）：
@@ -117,18 +127,43 @@ roslaunch payload_planner replan.launch use_planner:=true
   # 圆轨迹 + 无风
   roslaunch payload_planner controller_only.launch trajectory_mode:=circle      wind_type:=none
   # 八字轨迹 + 恒定 1 m/s 东风（假设配置文件已给出速度/方向）
-  roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight wind_type:=constant
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight \
+    wind_type:=constant \
+    wind_constant_velocity:=[1.0,0.0,0.0]
   # 螺旋轨迹 + 正弦阵风（自定义振幅/频率）
-  roslaunch payload_planner controller_only.launch trajectory_mode:=helix       wind_type:=gust   wind/gust/mode:=sine   wind/gust/amplitude:=0.6 wind/gust/frequency:=0.25
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=helix \
+    wind_type:=gust \
+    wind_gust_axis:=[0.0,1.0,0.0] \
+    wind_override_yaml:="{gust: {mode: sine, amplitude: 0.6, frequency: 0.25}}"
   # 圆轨迹 + 方波阵风（占空比 40%）
-  roslaunch payload_planner controller_only.launch trajectory_mode:=circle      wind_type:=gust   wind/gust/mode:=square wind/gust/amplitude:=0.4 wind/gust/frequency:=0.3 wind/gust/duty_cycle:=0.4
-  # 解析轨迹 + Dryden 湍流（按需要覆盖 sigma 等参数）
-  roslaunch payload_planner controller_only.launch trajectory_mode:=helix       wind_type:=dryden wind/dryden/sigma:=[0.5,0.5,0.2]
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle \
+    wind_type:=gust \
+    wind_gust_axis:=[0.0,1.0,0.0] \
+    wind_override_yaml:="{gust: {mode: square, amplitude: 0.4, frequency: 0.3, duty_cycle: 0.4}}"
+  # 解析轨迹 + Dryden 湍流（最小配置）
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=helix \
+    wind_type:=dryden \
+    wind_dryden_sigma:=[0.5,0.5,0.2]
   ```
 
 - 若希望在规划器模式下指定风场，可直接在 `replan.launch` 中附加同样的风场参数；例如：
   ```bash
-  roslaunch payload_planner replan.launch use_planner:=true wind_type:=gust wind/gust/mode:=sine wind/gust/amplitude:=0.5 wind/gust/frequency:=0.2
+  # 阵风（正弦）
+  roslaunch payload_planner replan.launch \
+    use_planner:=true \
+    wind_type:=gust \
+    wind_gust_axis:=[0.0,1.0,0.0] \
+    wind_override_yaml:="{gust: {mode: sine, amplitude: 0.5, frequency: 0.2}}"
+
+  # Dryden（最小配置）
+  roslaunch payload_planner replan.launch \
+    use_planner:=true \
+    wind_type:=dryden \
+    wind_dryden_sigma:=[0.5,0.5,0.2]
   ```
 
 - 启动后也可通过 rosparam 在线切换轨迹与风场：
@@ -136,6 +171,12 @@ roslaunch payload_planner replan.launch use_planner:=true
   rosparam set /mpc_controller_node/reference/mode figure_eight
   rosparam set /payload_planner/simulator/wind/type gust
   rosparam set /payload_planner/simulator/wind/gust/amplitude 0.3
+  ```
+  其中 `wind_override_yaml` 支持任意 YAML 片段，需使用双引号包裹并注意在 shell 中转义；示例：
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    wind_type:=gust \
+    wind_override_yaml:="{gust: {amplitude: 0.6, frequency: 0.3, axis: [0,1,0]}}"
   ```
 
 - 若环境缺少 `python-dateutil` 或 GUI，脚本会自动启用轻量级兼容层，在 headless 场景仍可生成 PNG；也可使用 `rosrun payload_mpc_controller plot_force_comparison.py` 离线重绘。

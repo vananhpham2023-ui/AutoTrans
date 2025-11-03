@@ -28,6 +28,11 @@
   <arg name="helix_vertical_rate" default="0.4"/>
   <arg name="helix_revolutions" default="3.0"/>
   <arg name="wind_type" default="none"/>
+  <arg name="wind_constant_velocity" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_gust_axis" default="[1.0,0.0,0.0]"/>
+  <arg name="wind_dryden_sigma" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_dryden_length_scale" default="[50.0,50.0,20.0]"/>
+  <arg name="wind_override_yaml" default="{}"/>
 
   <!-- map and planner -->
   <remap from="/traj_start_trigger" to="/move_base_simple/goal"/>
@@ -146,6 +151,11 @@
     <arg name="odometry_topic" value="$(arg odom_topic)" />
     <arg name="payload_odometry_topic" value="$(arg payload_odom_topic)" />
     <arg name="wind_type" value="$(arg wind_type)" />
+    <arg name="wind_constant_velocity" value="$(arg wind_constant_velocity)" />
+    <arg name="wind_gust_axis" value="$(arg wind_gust_axis)" />
+    <arg name="wind_dryden_sigma" value="$(arg wind_dryden_sigma)" />
+    <arg name="wind_dryden_length_scale" value="$(arg wind_dryden_length_scale)" />
+    <arg name="wind_override_yaml" value="$(arg wind_override_yaml)" />
   </include>
 
   <group if="$(arg use_planner)">

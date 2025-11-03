@@ -21,6 +21,11 @@
   <arg name="init_y" default="0.0"/>
   <arg name="init_z" default="2.0"/>
   <arg name="wind_type" default="none"/>
+  <arg name="wind_constant_velocity" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_gust_axis" default="[1.0,0.0,0.0]"/>
+  <arg name="wind_dryden_sigma" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_dryden_length_scale" default="[50.0,50.0,20.0]"/>
+  <arg name="wind_override_yaml" default="{}"/>
 
   <include file="$(find payload_planner)/launch/replan.launch">
     <arg name="use_planner" value="false"/>
@@ -46,5 +51,10 @@
     <arg name="init_y" value="$(arg init_y)"/>
     <arg name="init_z" value="$(arg init_z)"/>
     <arg name="wind_type" value="$(arg wind_type)"/>
+    <arg name="wind_constant_velocity" value="$(arg wind_constant_velocity)"/>
+    <arg name="wind_gust_axis" value="$(arg wind_gust_axis)"/>
+    <arg name="wind_dryden_sigma" value="$(arg wind_dryden_sigma)"/>
+    <arg name="wind_dryden_length_scale" value="$(arg wind_dryden_length_scale)"/>
+    <arg name="wind_override_yaml" value="$(arg wind_override_yaml)"/>
   </include>
 </launch>
