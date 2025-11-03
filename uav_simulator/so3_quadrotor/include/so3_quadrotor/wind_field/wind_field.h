@@ -24,7 +24,8 @@ enum class WindFieldType
   None = 0,
   Constant,
   Gust,
-  Dryden
+  Dryden,
+  Composite
 };
 
 enum class GustMode

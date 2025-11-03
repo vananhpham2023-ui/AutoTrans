@@ -205,6 +205,26 @@ private:
   double length_scale_[3];
 };
 
+class CompositeWindField : public WindFieldBase
+{
+public:
+  CompositeWindField(const ConstantWindConfig &constant_config, const DrydenWindConfig &dryden_config)
+      : constant_velocity_(constant_config.velocity),
+        dryden_field_(dryden_config)
+  {
+  }
+
+  Eigen::Vector3d sample(const Eigen::Vector3d &position_world, double time_sec) const override
+  {
+    // Dryden component produces turbulence around the steady bias.
+    return constant_velocity_ + dryden_field_.sample(position_world, time_sec);
+  }
+
+private:
+  Eigen::Vector3d constant_velocity_{Eigen::Vector3d::Zero()};
+  DrydenWindField dryden_field_;
+};
+
 } // namespace
 
 WindFieldType typeFromString(const std::string &type)
@@ -222,6 +242,10 @@ WindFieldType typeFromString(const std::string &type)
   {
     return WindFieldType::Dryden;
   }
+  if (lower == "composite" || lower == "dryden_composite")
+  {
+    return WindFieldType::Composite;
+  }
   return WindFieldType::None;
 }
 
@@ -235,6 +259,8 @@ std::string typeToString(WindFieldType type)
     return "gust";
   case WindFieldType::Dryden:
     return "dryden";
+  case WindFieldType::Composite:
+    return "composite";
   default:
     return "none";
   }
@@ -321,6 +347,8 @@ std::unique_ptr<WindFieldBase> createWindField(const WindFieldConfig &config)
     return std::make_unique<PeriodicGustWindField>(config.gust);
   case WindFieldType::Dryden:
     return std::make_unique<DrydenWindField>(config.dryden);
+  case WindFieldType::Composite:
+    return std::make_unique<CompositeWindField>(config.constant, config.dryden);
   default:
     return std::make_unique<NoneWindField>();
   }

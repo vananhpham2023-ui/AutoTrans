@@ -104,6 +104,7 @@ target_link_libraries(mpc_controller_node
 catkin_install_python(PROGRAMS
   scripts/force_data_recorder.py
   scripts/plot_force_comparison.py
+  scripts/pinn_data_recorder.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

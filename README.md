@@ -120,6 +120,12 @@ roslaunch payload_planner replan.launch use_planner:=true
   roslaunch payload_planner controller_only.launch \
     wind_type:=dryden \
     wind_dryden_sigma:=[0.5,0.5,0.2]
+  # 复合风场：常值 + Dryden 湍流
+  roslaunch payload_planner controller_only.launch \
+    wind_type:=composite \
+    wind_constant_velocity:=[3.0,0.0,0.0] \
+    wind_dryden_sigma:=[0.6,0.6,0.3] \
+    wind_override_yaml:="{dryden: {length_scale: [25.0,25.0,12.0], seed: 77}}"
   ```
 
 - 轨迹/风场组合速查（控制-only 模式）：
@@ -148,6 +154,13 @@ roslaunch payload_planner replan.launch use_planner:=true
     trajectory_mode:=helix \
     wind_type:=dryden \
     wind_dryden_sigma:=[0.5,0.5,0.2]
+  # 圆轨迹 + 复合风场（常值 2 m/s + Dryden）
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle \
+    wind_type:=composite \
+    wind_constant_velocity:=[2.0,0.0,0.0] \
+    wind_dryden_sigma:=[0.5,0.5,0.2] \
+    wind_dryden_length_scale:=[20.0,20.0,10.0]
   ```
 
 - 若希望在规划器模式下指定风场，可直接在 `replan.launch` 中附加同样的风场参数；例如：
@@ -171,7 +184,9 @@ roslaunch payload_planner replan.launch use_planner:=true
   rosparam set /mpc_controller_node/reference/mode figure_eight
   rosparam set /payload_planner/simulator/wind/type gust
   rosparam set /payload_planner/simulator/wind/gust/amplitude 0.3
-  ```
+  rosparam set /payload_planner/simulator/wind/type composite
+  rosparam set /payload_planner/simulator/wind/constant/velocity [2.0,0.0,0.0]
+```
   其中 `wind_override_yaml` 支持任意 YAML 片段，需使用双引号包裹并注意在 shell 中转义；示例：
   ```bash
   roslaunch payload_planner controller_only.launch \

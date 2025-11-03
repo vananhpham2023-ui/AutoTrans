@@ -49,6 +49,7 @@
 | **恒定风场** | 固定方向+幅值，可通过 YAML 指定 | `wind/type:=constant`，`speed`, `direction` |
 | **周期性阵风** | 提供正弦 / 方波模式；支持相位、偏置、幅值、频率 | `wind/type:=gust`, `gust/mode:=sine|square`, `amplitude`, `frequency`, `bias` |
 | **近地面湍流（Dryden）** | 基于 Dryden 滤波器生成 3 轴湍流分量；需维护滤波器状态（白噪声驱动） | `wind/type:=dryden`, `dryden/U_sigma`, `dryden/bandwidth`, `dryden/height_ref` 等 |
+| **复合风场（常值+Dryden）** | 在常值基础风上叠加 Dryden 湍流，支持高度衰减 | `wind/type:=composite`，共用 `constant/*` 与 `dryden/*` 配置 |
 
 - Dryden 实现：参考 MIL-F-8785C，创建 `DrydenFilter` 类，维护一阶/二阶滤波器状态，输入标准高斯噪声（`std::normal_distribution`）。根据飞行高度自适应缩放湍流强度。
 - 阵风方波：可使用占空比参数控制持续时间；为避免速度跳跃，建议在切换点使用一阶滤波（或线性过渡）平滑。
@@ -69,6 +70,7 @@
 - **阶段 C：风场类型实现**
   - 实现 `NoneWindField`、`ConstantWindField`、`PeriodicGustWindField`（支持正弦/方波切换）。
   - 编写 `DrydenWindField`，完成滤波器状态维护与噪声驱动，参数校准参考 MIL-F-8785C。
+  - 新增 `CompositeWindField`，复用常值与 Dryden 参数，保证状态可重入。
 - **阶段 D：工具链联调**
   - 扩展 `force_data_recorder` 支持可选订阅 `/wind`，在 CSV 写入风速列。
   - 制定样例 launch（四种风型），更新 README/AGENT 中的运行说明。

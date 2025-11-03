@@ -1,0 +1,447 @@
+# 概述
+该文档记录在 AutoTrans 仿真栈中提取PINN所需数据集，包括xxxx等步骤，便于后续按阶段推进。
+
+
+
+
+
+
+
+
+PINN 外力估计器数据集生成与训练方案
+
+  1. 数据集生成方案
+
+  1.1 场景组合设计
+
+  解析轨迹 × 风场条件组合（参数与 controller_only.launch 完全对应）：
+
+  轨迹参数模板（Trajectory Arguments）：
+  - T1 circle：`trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0`
+  - T2 figure_eight：`trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0`
+  - T3 helix：`trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0`
+
+  风场参数模板（Wind Arguments）：
+  - W1 无风基线：`wind_type:=none wind_override_yaml:='{}'`
+  - W2 恒风-顺风：`wind_type:=constant wind_constant_velocity:='[2.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - W3 恒风-侧风：`wind_type:=constant wind_constant_velocity:='[0.0,2.0,0.0]' wind_override_yaml:='{}'`
+  - W4 恒风-斜向：`wind_type:=constant wind_constant_velocity:='[1.5,1.5,0.0]' wind_override_yaml:='{}'`
+  - W5 恒风-强风：`wind_type:=constant wind_constant_velocity:='[3.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - W6 阵风-正弦 X 轴：`wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.5, frequency: 0.2}}'`
+  - W7 阵风-正弦 Y 轴：`wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 2.0, frequency: 0.5}}'`
+  - W8 阵风-正弦 45°：`wind_type:=gust wind_gust_axis:='[0.707,0.707,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.0, frequency: 0.8}}'`
+  - W9 阵风-方波 X 轴：`wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 2.0, frequency: 0.3, duty_cycle: 0.5}}'`
+  - W10 阵风-方波 Y 轴：`wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 1.5, frequency: 0.5, duty_cycle: 0.3}}'`
+  - W11 Dryden-弱扰动：`wind_type:=dryden wind_dryden_sigma:='[0.5,0.5,0.2]' wind_dryden_length_scale:='[15.0,15.0,7.5]' wind_override_yaml:='{dryden: {seed: 42}}'`
+  - W12 Dryden-中等扰动：`wind_type:=dryden wind_dryden_sigma:='[1.0,1.0,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 123}}'`
+  - W13 Dryden-强扰动：`wind_type:=dryden wind_dryden_sigma:='[1.5,1.5,0.4]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 456}}'`
+  - W14 复合-顺风弱湍流：`wind_type:=composite wind_constant_velocity:='[2.0,0.0,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 2024}}'`
+
+  Launch 命令模板（42 组场景组合）：
+  - [T1-W1] circle + 无风：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=none wind_override_yaml:='{}'`
+  - [T1-W2] circle + 恒风顺风：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[2.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - [T1-W3] circle + 恒风侧风：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[0.0,2.0,0.0]' wind_override_yaml:='{}'`
+  - [T1-W4] circle + 恒风斜向：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[1.5,1.5,0.0]' wind_override_yaml:='{}'`
+  - [T1-W5] circle + 恒风强风：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[3.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - [T1-W6] circle + 阵风正弦 X：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.5, frequency: 0.2}}'`
+  - [T1-W7] circle + 阵风正弦 Y：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 2.0, frequency: 0.5}}'`
+  - [T1-W8] circle + 阵风正弦 45°：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=gust wind_gust_axis:='[0.707,0.707,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.0, frequency: 0.8}}'`
+  - [T1-W9] circle + 阵风方波 X：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 2.0, frequency: 0.3, duty_cycle: 0.5}}'`
+  - [T1-W10] circle + 阵风方波 Y：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 1.5, frequency: 0.5, duty_cycle: 0.3}}'`
+  - [T1-W11] circle + Dryden 弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=dryden wind_dryden_sigma:='[0.5,0.5,0.2]' wind_dryden_length_scale:='[15.0,15.0,7.5]' wind_override_yaml:='{dryden: {seed: 42}}'`
+  - [T1-W12] circle + Dryden 中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=dryden wind_dryden_sigma:='[1.0,1.0,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 123}}'`
+  - [T1-W13] circle + Dryden 强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=dryden wind_dryden_sigma:='[1.5,1.5,0.4]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 456}}'`
+  - [T1-W14] circle + 复合顺风弱湍流：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[2.0,0.0,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 2024}}'`
+  - [T2-W1] figure_eight + 无风：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=none wind_override_yaml:='{}'`
+  - [T2-W2] figure_eight + 恒风顺风：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[2.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - [T2-W3] figure_eight + 恒风侧风：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[0.0,2.0,0.0]' wind_override_yaml:='{}'`
+  - [T2-W4] figure_eight + 恒风斜向：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[1.5,1.5,0.0]' wind_override_yaml:='{}'`
+  - [T2-W5] figure_eight + 恒风强风：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=constant wind_constant_velocity:='[3.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - [T2-W6] figure_eight + 阵风正弦 X：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.5, frequency: 0.2}}'`
+  - [T2-W7] figure_eight + 阵风正弦 Y：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 2.0, frequency: 0.5}}'`
+  - [T2-W8] figure_eight + 阵风正弦 45°：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=gust wind_gust_axis:='[0.707,0.707,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.0, frequency: 0.8}}'`
+  - [T2-W9] figure_eight + 阵风方波 X：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 2.0, frequency: 0.3, duty_cycle: 0.5}}'`
+  - [T2-W10] figure_eight + 阵风方波 Y：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 1.5, frequency: 0.5, duty_cycle: 0.3}}'`
+  - [T2-W11] figure_eight + Dryden 弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=dryden wind_dryden_sigma:='[0.5,0.5,0.2]' wind_dryden_length_scale:='[15.0,15.0,7.5]' wind_override_yaml:='{dryden: {seed: 42}}'`
+  - [T2-W12] figure_eight + Dryden 中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=dryden wind_dryden_sigma:='[1.0,1.0,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 123}}'`
+  - [T2-W13] figure_eight + Dryden 强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=dryden wind_dryden_sigma:='[1.5,1.5,0.4]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 456}}'`
+  - [T2-W14] figure_eight + 复合顺风弱湍流：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[2.0,0.0,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 2024}}'`
+  - [T3-W1] helix + 无风：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=none wind_override_yaml:='{}'`
+  - [T3-W2] helix + 恒风顺风：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=constant wind_constant_velocity:='[2.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - [T3-W3] helix + 恒风侧风：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=constant wind_constant_velocity:='[0.0,2.0,0.0]' wind_override_yaml:='{}'`
+  - [T3-W4] helix + 恒风斜向：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=constant wind_constant_velocity:='[1.5,1.5,0.0]' wind_override_yaml:='{}'`
+  - [T3-W5] helix + 恒风强风：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=constant wind_constant_velocity:='[3.0,0.0,0.0]' wind_override_yaml:='{}'`
+  - [T3-W6] helix + 阵风正弦 X：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.5, frequency: 0.2}}'`
+  - [T3-W7] helix + 阵风正弦 Y：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 2.0, frequency: 0.5}}'`
+  - [T3-W8] helix + 阵风正弦 45°：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=gust wind_gust_axis:='[0.707,0.707,0.0]' wind_override_yaml:='{gust: {mode: sine, amplitude: 1.0, frequency: 0.8}}'`
+  - [T3-W9] helix + 阵风方波 X：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=gust wind_gust_axis:='[1.0,0.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 2.0, frequency: 0.3, duty_cycle: 0.5}}'`
+  - [T3-W10] helix + 阵风方波 Y：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=gust wind_gust_axis:='[0.0,1.0,0.0]' wind_override_yaml:='{gust: {mode: square, amplitude: 1.5, frequency: 0.5, duty_cycle: 0.3}}'`
+  - [T3-W11] helix + Dryden 弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=dryden wind_dryden_sigma:='[0.5,0.5,0.2]' wind_dryden_length_scale:='[15.0,15.0,7.5]' wind_override_yaml:='{dryden: {seed: 42}}'`
+  - [T3-W12] helix + Dryden 中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=dryden wind_dryden_sigma:='[1.0,1.0,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 123}}'`
+  - [T3-W13] helix + Dryden 强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=dryden wind_dryden_sigma:='[1.5,1.5,0.4]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 456}}'`
+  - [T3-W14] helix + 复合顺风弱湍流：`roslaunch payload_planner controller_only.launch trajectory_mode:=helix helix_radius:=2.5 helix_omega:=0.4 helix_center_x:=0.0 helix_center_y:=0.0 helix_base_altitude:=1.5 helix_vertical_rate:=0.2 helix_revolutions:=3.0 wind_type:=composite wind_constant_velocity:='[2.0,0.0,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[20.0,20.0,10.0]' wind_override_yaml:='{dryden: {seed: 2024}}'`
+
+  总计：3 轨迹 × 14 风场 = 42 场景
+  每场景运行时长：≥10个周期（约60-120秒）
+  采样频率：100Hz → 约24万-48万样本
+
+  1.2 自动化批量数据采集
+
+  方案A：编写批量运行脚本（推荐）
+  方案B：修改现有记录器以支持自定义输出路径( 修改 force_data_recorder.py 接受环境变量 FORCE_DATA_OUTPUT 来指定输出目录)
+  1.3 数据记录增强
+  扩展 force_data_recorder.py 记录额外信息.
+
+   2. 数据格式与特征工程设计
+   2.1 扩展数据记录器以收集PINN训练数据
+  需要创建一个新的数据记录器 pinn_data_recorder.py，记录以下信息：
+
+  输入特征（与当前估计器对齐）：
+  # 载机状态（来自 /visual_slam/odom 和 /drone_imu/data）
+  - quad_pos: [x, y, z]                    # 位置
+  - quad_vel: [vx, vy, vz]                 # 速度
+  - quad_quat: [R13，R23，R33]             # 旋转矩阵第1行第3列、第2行第3列、第3行第3列的元素
+  - quad_omega: [wx, wy, wz]               # 角速度（来自IMU）
+  - quad_acc_body: [ax, ay, az]            # 加速度（机体系，来自IMU）
+
+  # 负载状态（来自 /payload_odom 和 /load_imu/data）
+  - load_pos: [x, y, z]
+  - load_vel: [vx, vy, vz]
+  - load_acc_body: [ax, ay, az]
+
+  # 缆绳信息（来自 /cable_info/data）
+  - cable_dir: [nx, ny, nz]                # 单位方向向量
+
+  # 参数常量（从config读取，每个场景记录一次）
+  - mass_quad, mass_load, L_length, sqrt_kf
+
+  输出标签（Ground Truth）：
+  - fl_true: [fx, fy, fz]                  # 负载外力真值
+  - fq_true: [fx, fy, fz]                  # 载机外力真值
+
+  辅助信息（用于分析和对比）：
+  - wind: [wx, wy, wz]                     # 风速（如果启用）
+  - fl_est_lbfgs: [fx, fy, fz]            # L-BFGS估计值（基线对比）
+  - fq_est_lbfgs: [fx, fy, fz]
+
+  2.2 数据预处理策略
+
+  # 归一化方案（基于物理范围）
+  position: [-10, 10] m → [-1, 1]
+  velocity: [-5, 5] m/s → [-1, 1]
+  quaternion: 保持单位范数（无需归一化）
+  angular_velocity: [-3, 3] rad/s → [-1, 1]
+  acceleration: [-20, 20] m/s² → [-1, 1]
+  cable_dir: 单位向量（无需归一化）
+  force: [-30, 30] N → [-1, 1]
+
+  # 时序特征工程（如果使用历史窗口）
+  window_size = 10  # 0.1秒历史（100Hz）
+  stride = 1        # 滑动步长
+
+  3. PINN网络架构建议
+● 3.1 PINN架构设计（两种方案）
+  方案A：物理约束损失型MLP（推荐用于baseline）
+  网络结构：
+  Input (dim=37): [quad_state(16) + load_state(16) + cable_dir(3) + thrust(1) + params(1)]
+    ↓
+  Hidden Layer 1 (128) + LayerNorm + ReLU + Dropout(0.1)
+    ↓
+  Hidden Layer 2 (128) + LayerNorm + ReLU + Dropout(0.1)
+    ↓
+  Hidden Layer 3 (64) + LayerNorm + ReLU
+    ↓
+  Output (6): [fl_x, fl_y, fl_z, fq_x, fq_y, fq_z]
+
+  损失函数：
+  L_total = λ_data * L_data + λ_physics * L_physics
+  L_data = MSE(fl_pred, fl_true) + MSE(fq_pred, fq_true)
+  L_physics = 物理残差的平方和：
+    # 从加速度推导的系统总力
+    F_total_measured = m_q * a_q + m_l * a_l - T_vec
+    # 从估计外力推导的总力
+    F_total_estimated = fl_pred + fq_pred
+    # 物理一致性损失
+    L_physics = ||F_total_measured - F_total_estimated||²
+
+  超参数：
+  λ_data = 1.0, λ_physics = 0.1（可调）
+
+  优点：
+  - 结构简单，易于训练和调试
+  - 计算高效（~0.1ms推理时间）
+  - 物理约束作为软约束，允许噪声
+
+  缺点：
+  - 不能保证严格满足物理定律
+
+  方案B：时序PINN（LSTM/GRU，用于捕捉动态）
+
+  Input sequence (window_size=10, dim=37)
+    ↓
+  LSTM/GRU Layer (hidden=64, layers=2)
+    ↓
+  取最后时刻输出 → MLP (64→32→6)
+    ↓
+  Output (6): [fl, fq]
+
+  损失函数：同方案A
+
+  超参数：
+  window_size = 10 (0.1秒历史)
+
+  优点：
+  - 捕捉系统动态和历史依赖
+  - 可能对快速机动更鲁棒
+
+  缺点：
+  - 推理时间较长（~1-2ms）
+  - 需要维护历史窗口
+
+  推荐策略：
+  1. 第一阶段： 方案A（快速验证可行性）
+  2. 第二阶段： 方案B（提升性能）
+  3. 最终对比： 两种方案 + L-BFGS基线
+
+  3.2 网络实现框架建议
+
+  框架选择：DeepXDE
+  部署优化：
+  - ONNX导出 → C++推理（onnxruntime）
+  - TorchScript（如果用PyTorch）
+  - 量化（INT8）以加速推理
+
+  4. 训练和评估流程
+● 4.1 数据集划分策略
+  # 按场景划分（避免数据泄漏）
+  训练集（70%）：约27个场景
+    - 所有轨迹类型
+    - 无风 + 多种恒风 + 部分阵风/Dryden
+  验证集（15%）：约6个场景
+    - 所有轨迹类型
+    - 未见过的风场参数组合
+  测试集（15%）：约6个场景
+    - 所有轨迹类型
+    - 极端风场条件（测试泛化性）
+    - 包含未见轨迹参数（如不同半径的circle）
+
+  # 时序数据划分注意事项
+  - 不要跨场景切分（保持场景完整性）
+  - 每个场景内可以滑动窗口采样
+  - 确保测试集风场类型多样性
+
+  4.2 训练流程
+  # 1. 数据加载与预处理
+  - 读取所有场景CSV
+  - 归一化输入/输出
+  - 生成滑动窗口（如果用LSTM）
+
+  # 2. 训练配置
+  optimizer: Adam
+  learning_rate: 1e-3（初始） → 1e-5（后期）
+  batch_size: 256
+  epochs: 100-200
+  early_stopping: patience=20（基于验证集RMSE）
+  # 3. 学习率调度
+  ReduceLROnPlateau(factor=0.5, patience=10)
+
+  # 4. 监控指标
+  - 训练损失：L_total, L_data, L_physics
+  - 验证RMSE：fl_rmse, fq_rmse（分轴和总）
+  - 物理残差：平均物理违反程度
+
+  # 5. 实验跟踪
+  使用 Weights & Biases (wandb) 或 TensorBoard 记录：
+  - 损失曲线
+  - RMSE vs epoch
+  - 不同风场条件下的性能
+  - 推理时间统计
+
+  4.3 评估指标体系
+
+  # 离线评估（在测试集上）
+  1. 外力估计精度
+     - RMSE (总体和分轴)：fl_rmse_x/y/z, fq_rmse_x/y/z
+     - MAE (平均绝对误差)
+     - Max Error (最大误差)
+
+  2. 物理一致性
+     - Physics Residual: ||F_total_measured - F_estimated||
+     - 动量守恒违反度
+
+  3. 不同条件下的鲁棒性
+     - 按风场类型分组的RMSE
+     - 按轨迹类型分组的RMSE
+     - 快速机动阶段 vs 平稳飞行阶段
+
+  4. 计算性能
+     - 单次推理时间（mean, std, p99）
+     - 吞吐量（samples/sec）
+     - 模型大小（参数量，内存占用）
+
+  # 在线闭环评估（重要！）
+  5. 闭环控制性能（将PINN集成到MPC控制器）
+     - 轨迹跟踪RMSE（位置、速度）
+     - 控制输入平滑度
+     - 有风扰动下的鲁棒性
+     - 与L-BFGS基线的对比
+
+  6. 收敛特性
+     - 从零初始化到稳态的收敛时间
+     - 风场突变后的适应速度
+
+  4.4 对比实验设计
+
+  基线方法：
+  1. L-BFGS多窗口估计器（当前默认，主要基线）
+  2. 闭式分解力估计器（下限基线）
+  3. 零估计（无估计器，测试影响）
+  4. 真值外力（性能上限）
+
+  PINN变体：
+  1. PINN-MLP（方案A）
+  2. PINN-LSTM（方案B）
+  3. Vanilla NN（无物理约束，消融实验）
+
+  评估维度：
+  - 准确度：RMSE对比
+  - 实时性：推理时间对比
+  - 鲁棒性：不同风场条件下的性能分布
+  - 闭环性能：控制质量对比
+
+  5. 部署和实时推理方案
+
+● 5.1 模型导出与优化
+
+  5.2 C++ ROS节点集成
+  选项A：创建新的PINN估计器类（推荐）
+
+  选项B：Python ROS节点（快速原型）
+
+  5.3 集成到现有控制器
+
+  5.4 性能监控和调优
+
+  6. 完整实施路线图
+
+● 阶段1：数据采集
+  ├─ Week 1
+  │  ├─ 编写 pinn_data_recorder.py（扩展现有记录器）
+  │  │    - 状态：已完成。脚本默认订阅 /visual_slam/odom、/imu、/load_imu、/payload_odom、/cable_info、/rpm、/so3_quadrotor/true_force、/mpc_controller_node/mpc/force，输出 CSV 至 payload_mpc_controller/plots/pinn_dataset（可用 PINN_DATA_OUTPUT、PINN_SCENARIO_ID 覆盖）。
+  │  │    - 待办：在 controller_only.launch 中新增 pinn_data_recorder 节点或使用 rosrun 手动执行，验证 39 组场景输出。
+  │  ├─ 编写 batch_data_collection.py（自动化批量运行）
+  │  ├─ 单元测试：手动运行2-3个场景验证数据完整性
+  │  └─ 运行完整39场景数据采集（后台运行）
+  │
+  └─ Week 2
+     ├─ 数据质量检查：缺失值、异常值、同步性
+     ├─ 数据统计分析：绘制输入/输出分布，确定归一化参数
+     └─ 数据集划分：train/val/test split
+
+  阶段2：模型开发
+  ├─ Week 3
+  │  ├─ 搭建PyTorch训练框架（数据加载、训练循环）
+  │  ├─ 实现PINN-MLP（方案A）+ 物理损失函数
+  │  ├─ 在小数据子集上验证训练可行性
+  │  └─ 超参数搜索：学习率、λ_physics、网络深度/宽度
+  │
+  ├─ Week 4
+  │  ├─ 完整训练PINN-MLP
+  │  ├─ 实现PINN-LSTM（方案B）
+  │  ├─ 对比实验：MLP vs LSTM vs Vanilla NN
+  │  └─ 离线评估：RMSE、物理残差、推理时间
+  │
+  └─ Week 5
+     ├─ 消融实验：不同物理损失权重、不同输入特征组合
+     └─ 模型压缩：剪枝、量化
+
+  阶段3：部署集成
+  ├─ Week 6
+  │  ├─ 模型导出：DeepXDE
+  │  ├─ 选择部署方案：C++节点 或 Python节点
+  │  ├─ 实现推理接口：PINNForceEstimator类
+  │  └─ 单元测试：推理正确性、性能基准
+  │
+  └─ Week 7
+     ├─ 集成到 mpc_controller_node
+     ├─ 配置文件更新：mpc.yaml添加PINN选项
+     ├─ 离线闭环测试：用录制的bag文件回放
+     └─ 性能调优：内存优化、推理加速
+
+  阶段4：验证与对比
+  └─ Week 8
+     ├─ 在线仿真对比实验
+     │  ├─ PINN vs L-BFGS（不同风场条件）
+     │  ├─ 轨迹跟踪性能对比
+     │  └─ 计算资源占用对比（CPU、内存）
+     ├─ 生成对比图表和论文数据
+     └─ 撰写技术报告/论文初稿
+
+  阶段5：论文实验
+  └─ Week 9-10
+     ├─ 补充实验：鲁棒性测试、泛化性测试
+     ├─ 可视化：训练曲线、误差热图、轨迹对比图
+     ├─ 消融研究：物理约束的作用、历史窗口的作用
+     └─ 论文撰写与投稿
+
+  7. 关键风险与缓解措施
+
+  风险1：PINN训练不稳定（物理损失和数据损失冲突）
+  缓解：
+  - 从纯数据损失开始，逐步增加物理损失权重（curriculum learning）
+  - 使用自适应权重：λ_physics = λ_0 * (L_data / L_physics)
+
+  风险2：实时性不满足（推理超过41ms）
+  缓解：
+  - 使用MLP而非LSTM（MLP通常<1ms）
+  - 模型剪枝和量化
+  - GPU加速（如果机载计算机有GPU）
+
+  风险3：泛化性不足（训练集外风场性能差）
+  缓解：
+  - 增加数据多样性（更多风场组合）
+  - 数据增强：在训练时添加噪声
+  - 正则化：Dropout、L2惩罚
+
+  风险4：闭环性能不如L-BFGS
+  缓解：
+  - 混合策略：PINN用于快速初估 + L-BFGS用于精细优化
+  - 在线微调：在飞行中持续学习（高级）
+  - 分析失败案例，针对性改进物理约束
+
+  8. 预期成果与论文贡献点
+  技术贡献：
+  1. 首次将PINN应用于四旋翼-负载系统外力估计
+  2. 物理约束的显式建模提升泛化性
+  3. 实时性与准确性的平衡（与传统优化方法对比）
+
+  实验验证：
+  1. 多风场条件下的鲁棒性验证
+  2. 与L-BFGS基线的全面对比
+  3. 闭环控制性能提升的定量分析
+
+  论文结构建议：
+  I. Introduction
+     - 外力估计在载荷控制中的重要性
+     - 现有方法的局限性（计算复杂度 vs 准确性）
+     - PINN的优势和本文贡献
+
+  II. Problem Formulation
+     - 四旋翼-负载系统动力学模型
+     - 外力估计问题定义
+     - 物理约束方程
+
+  III. PINN-Based Force Estimator
+     - 网络架构设计
+     - 物理约束损失函数
+     - 训练策略
+
+  IV. Experiments
+     - 数据集描述
+     - 离线评估：RMSE、物理残差
+     - 在线闭环评估：轨迹跟踪性能
+     - 对比实验：PINN vs L-BFGS vs 闭式
+
+  V. Conclusion & Future Work
+     - 在线学习和自适应
+     - 真实硬件验证
