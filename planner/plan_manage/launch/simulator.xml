@@ -5,6 +5,7 @@
   <arg name="map_size_x_"/>
   <arg name="map_size_y_"/>
   <arg name="map_size_z_"/>
+  <arg name="wind_type" default="none"/>
   <arg name="odometry_topic"/>
   <arg name="payload_odometry_topic"/>
 
@@ -20,6 +21,7 @@
     <param name="init_quady" value="$(arg init_y)"/>
     <param name="init_quadz" value="$(arg init_z)"/>
     <rosparam file="$(find uav_simulator)/config/so3_quadrotor.yaml"/>
+    <param name="wind/type" value="$(arg wind_type)"/>
     <remap from="~odom" to="$(arg odometry_topic)"/>
     <remap from="~imu" to="imu" />
     <remap from="~so3cmd" to="so3cmd"/>

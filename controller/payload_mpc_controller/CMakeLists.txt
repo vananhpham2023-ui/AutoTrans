@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(payload_mpc_controller)
+if(POLICY CMP0048)
+  cmake_policy(SET CMP0048 NEW)
+endif()
+project(payload_mpc_controller VERSION 1.0.0)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
@@ -96,6 +99,12 @@ target_include_directories(mpc_controller_node PUBLIC
 target_link_libraries(mpc_controller_node
   # mpc_solver
   ${catkin_LIBRARIES}
+)
+
+catkin_install_python(PROGRAMS
+  scripts/force_data_recorder.py
+  scripts/plot_force_comparison.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 if(CATKIN_ENABLE_TESTING)

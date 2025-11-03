@@ -6,7 +6,72 @@
 - 阶段 2：实现风场抽象接口与若干基础风型（恒定、线性剪切、阵风等），支持在仿真节点中采样并注入。
 - 阶段 3：扩展 SO(3) 模拟器，让外力根据相对风速自动计算；发布风场与扰动力真值话题，串联到 L-BFGS 外力估计器的验证流程。
 - 阶段 4：构建测试/回放脚本，批量生成含风扰动的轨迹与日志，为控制器鲁棒性评估及 PINN 训练提供数据。
+- 阶段 5：完成多类型风场注入与参数化，结合当前外力可视化工具形成标准化验证流程。
 
 # 已完成工作
 - （1）更新 `uav_simulator/so3_quadrotor/include/so3_quadrotor/quadrotor_dynamics.hpp` 中的气动力计算逻辑，
     新增 `setWindVelocity()` 并将原有基于机体/负载速度的阻力项替换为基于相对风速 `v_rel` 的实现，为后续风场注入做好接口。
+- （2）在 SO(3) 仿真节点内缓存每步积分后的真实外力（`fl_true_`、`fq_true_`），以 `geometry_msgs/AccelStamped` 的形式低频发布 `/true_force`，并与现有 `/mpc/force` 估计值对齐时间戳。
+- （3）新增外力数据记录/可视化组件：`force_data_recorder.py` 订阅真值与估计值、自动同步并输出 CSV、PNG、RMSE；`plot_force_comparison.py` 支持无 `python-dateutil` 环境下离线渲染。`controller_only.launch` 会默认启动记录节点，方便后续风场扰动验证。
+- （4）完成阶段 A：引入 `wind_field` 基础框架与配置
+    - 在 `so3_quadrotor` 包内添加 `WindFieldBase` 抽象类与配置加载器，支持按 `rosparam` 生成风场实例（默认输出零风）。
+    - `so3_quadrotor.yaml` 新增 `wind` 参数块，`controller_only.launch` / `replan.launch` / `simulator.xml` 支持 `wind_type` 透传，便于后续阶段快速切换风型。
+- （5）完成阶段 B：仿真节点集成风场
+    - `so3_quadrotor_nodelet` 在初始化时加载风场配置，创建 `/wind` 发布者，并在每轮仿真采样无人机/负载位置的风速。
+    - 采样结果写入 `Quadrotor::setWindVelocity()`，外部可通过 `/wind` 话题观测当前风速，时间戳以仿真时钟对齐。
+- （6）完成阶段 C：风场类型实现
+    - 实现 `None`、`Constant`、`PeriodicGust`（正弦/方波）和 `Dryden` 风场模型，支持 YAML 配置参数。
+    - Dryden 风场采用简化的 Ornstein-Uhlenbeck 模型，按高度自适应强度并保持随机数种子可控。
+- （7）完成阶段 D：工具链联调
+    - `force_data_recorder` 支持可选 `/so3_quadrotor/wind` 订阅，在 CSV 增加风速列。README/AGENT 文档添加四种风型的示例命令，方便快速复现。
+    - Debug：发现 `so3_quadrotor_nodelet` 在 RViz/控制链启动时崩溃（`Failed to load nodelet`），GDB 定位到 `timer_callback` 中访问未初始化的 `vis_msg_.markers[7]`。根因是 timer 在 marker 数组填充前就触发。已将 `simulation_timer` 的创建挪到 marker 初始化之后，并在 timer 中加入 `markers.size()<8` 的保护，问题复现脚本（`test_simulator.launch`）验证通过。
+
+# 风场注入方案（待实施）
+
+## 总体思路
+1. **统一风场接口**  
+   - 在 `uav_simulator` 新增 `wind_field` 模块，定义 `WindFieldBase` 抽象类：`Eigen::Vector3d sample(const Eigen::Vector3d& pos, double time)` 返回世界系风速。  
+   - 配置入口：扩展 `so3_quadrotor.yaml` 与 `replan.launch`/`controller_only.launch` 露出 `wind/type`、参数组（振幅、频率、湍流尺度等）。
+
+2. **SO3 仿真节点改造**  
+   - 在 `so3_quadrotor_nodelet` 中加载 `WindFieldBase` 实例，每个仿真 tick 取无人机/负载位置 → 风速向量，调用现有 `quadrotorPtr_->setWindVelocity(wind_quad, wind_load)`。  
+   - 将实时风速通过新话题 `/wind`（`geometry_msgs::Vector3Stamped`）发布，便于外部可视化或日志记录。  
+   - 维持无风默认值（全零），保证向后兼容。
+
+3. **外力估计闭环验证**  
+   - 继续使用 `/true_force` 与 `/mpc/force` 记录器，运行不同风场场景时自动生成 RMSE、CSV、PNG。  
+   - 可选：在 CSV 中附加风速列，或在记录节点订阅 `/wind` 写入同一文件，方便后续离线分析。
+
+## 风场类型实现要点
+| 类型 | 说明 | 关键参数建议 |
+|------|------|--------------|
+| **无风场** | 返回零向量，作为基准 | `wind/type:=none` |
+| **恒定风场** | 固定方向+幅值，可通过 YAML 指定 | `wind/type:=constant`，`speed`, `direction` |
+| **周期性阵风** | 提供正弦 / 方波模式；支持相位、偏置、幅值、频率 | `wind/type:=gust`, `gust/mode:=sine|square`, `amplitude`, `frequency`, `bias` |
+| **近地面湍流（Dryden）** | 基于 Dryden 滤波器生成 3 轴湍流分量；需维护滤波器状态（白噪声驱动） | `wind/type:=dryden`, `dryden/U_sigma`, `dryden/bandwidth`, `dryden/height_ref` 等 |
+
+- Dryden 实现：参考 MIL-F-8785C，创建 `DrydenFilter` 类，维护一阶/二阶滤波器状态，输入标准高斯噪声（`std::normal_distribution`）。根据飞行高度自适应缩放湍流强度。
+- 阵风方波：可使用占空比参数控制持续时间；为避免速度跳跃，建议在切换点使用一阶滤波（或线性过渡）平滑。
+
+## 验证流程
+1. 选择场景：`roslaunch payload_planner controller_only.launch wind/type:=gust wind/gust/mode:=sine wind/gust/amplitude:=0.5 wind/gust/frequency:=0.2`.
+2. 运行 ≥10 周期，自动生成 `force_comparison.*`，检查 RMSE、对比图。
+3. 针对 Dryden 湍流，记录多次运行，统计 RMSE 均值/方差，评估估计器性能。
+4. 在 README / AGENT 中同步示例命令，并更新任务状态。
+
+## 分阶段开发任务
+- **阶段 A：接口与配置**
+  - 在 `uav_simulator` 搭建 `wind_field` 目录，实现 `WindFieldBase` 抽象类及 YAML 解析器。
+  - 增补 `so3_quadrotor.yaml`、`controller_only.launch`、`replan.launch` 的风场参数项，并提供默认（无风）配置。
+- **阶段 B：仿真节点集成**
+  - 在 `so3_quadrotor_nodelet` 创建风场实例、每 tick 采样无人机/负载风速，调用 `setWindVelocity`。
+  - 发布 `/wind` 话题，确认频率/时间戳与 `simulation_rate` 对齐。
+- **阶段 C：风场类型实现**
+  - 实现 `NoneWindField`、`ConstantWindField`、`PeriodicGustWindField`（支持正弦/方波切换）。
+  - 编写 `DrydenWindField`，完成滤波器状态维护与噪声驱动，参数校准参考 MIL-F-8785C。
+- **阶段 D：工具链联调**
+  - 扩展 `force_data_recorder` 支持可选订阅 `/wind`，在 CSV 写入风速列。
+  - 制定样例 launch（四种风型），更新 README/AGENT 中的运行说明。
+- **阶段 E：验证与文档**
+  - 运行固定场景获取基线 RMSE，对比各风型对估计器的影响。
+  - 总结结果、记录在 TASK2 与 README 中，形成阶段验收标准。

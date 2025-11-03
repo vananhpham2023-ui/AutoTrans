@@ -99,6 +99,8 @@ class Quadrotor {
   Eigen::Vector4d  input_ = Eigen::Vector4d::Zero(); // 电机输入命令
   Eigen::Vector3d wind_quad_world_ = Eigen::Vector3d::Zero(); // 世界系下无人机位置处风速
   Eigen::Vector3d wind_load_world_ = Eigen::Vector3d::Zero(); // 世界系下负载位置处风速
+  Eigen::Vector3d fl_true_ = Eigen::Vector3d::Zero(); // 上一次积分后的真实负载外力
+  Eigen::Vector3d fq_true_ = Eigen::Vector3d::Zero(); // 上一次积分后的真实无人机外力
  public:
   std::default_random_engine generator; // 随机数生成器
   std::normal_distribution<double> distribution{0.0,1.0}; // 正态分布
@@ -170,7 +172,7 @@ class Quadrotor {
    * 3. 空气阻力计算
    * 4. 基于绳索张力状态（松绳/紧绳）的不同动力学模型
    */
-  inline State diff(const State &state) {
+  inline State diff(const State &state, Eigen::Vector3d *fl_out = nullptr, Eigen::Vector3d *fq_out = nullptr) {
     State state_dot;
     // Re-orthonormalize R (polar decomposition)
     Eigen::LLT<Eigen::Matrix3d> llt(state.R.transpose() * state.R);
@@ -220,6 +222,13 @@ class Quadrotor {
 
     Eigen::Vector3d fl = Eigen::Vector3d(0,0.0,0) + random_force(0.0)-resistanceload *vload_dir ;
     Eigen::Vector3d fq = Eigen::Vector3d(0.0,0,0) + random_force(0.0)-resistancequad *vquad_dir;
+
+    if (fl_out) {
+      *fl_out = fl;
+    }
+    if (fq_out) {
+      *fq_out = fq;
+    }
 
 
     double delta = (state.x - state.xl).norm() - config_.l_length;
@@ -297,8 +306,11 @@ class Quadrotor {
     State k1 = diff(state_);
     State k2 = diff(state_+k1*dt/2);
     State k3 = diff(state_+k2*dt/2);
-    State k4 = diff(state_+k3*dt);
+    Eigen::Vector3d fl_k4(Eigen::Vector3d::Zero()), fq_k4(Eigen::Vector3d::Zero());
+    State k4 = diff(state_+k3*dt, &fl_k4, &fq_k4);
     state_ = state_ + (k1+k2*2+k3*2+k4) * dt/6;
+    fl_true_ = fl_k4;
+    fq_true_ = fq_k4;
     
     state_.ql.normalize();
     double delta = (state_.x - state_.xl).norm() - config_.l_length;
@@ -597,6 +609,22 @@ class Quadrotor {
    */
   inline Eigen::Vector3d getOmega() const {
     return state_.omega;
+  }
+
+  /**
+   * @brief 获取上一积分周期末的真实负载外力
+   * @return 负载外力（世界坐标系）
+   */
+  inline Eigen::Vector3d getTrueLoadForce() const {
+    return fl_true_;
+  }
+
+  /**
+   * @brief 获取上一积分周期末的真实无人机外力
+   * @return 无人机外力（世界坐标系）
+   */
+  inline Eigen::Vector3d getTrueQuadForce() const {
+    return fq_true_;
   }
 
 };

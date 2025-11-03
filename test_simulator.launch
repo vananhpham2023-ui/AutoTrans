@@ -1,0 +1,24 @@
+<launch>
+  <!-- Simple test launch file to check if the simulator nodelet loads correctly -->
+
+  <node pkg="nodelet" type="nodelet" name="manager" args="manager" output="screen"/>
+
+  <node pkg="nodelet" type="nodelet" name="so3_quadrotor_test" args="load so3_quadrotor/Nodelet manager" output="screen">
+    <param name="init_x" value="0.0"/>
+    <param name="init_y" value="0.0"/>
+    <param name="init_z" value="1.0"/>
+    <param name="init_quadx" value="0.0"/>
+    <param name="init_quady" value="0.0"/>
+    <param name="init_quadz" value="1.0"/>
+
+    <rosparam file="$(find uav_simulator)/config/so3_quadrotor.yaml"/>
+    <param name="wind/type" value="none"/>
+
+    <remap from="~odom" to="/test/odom"/>
+    <remap from="~odom_payload" to="/test/payload_odom"/>
+    <remap from="~so3cmd" to="/test/so3cmd"/>
+  </node>
+
+  <!-- Echo the odom topic to see if it's publishing -->
+  <node pkg="rostopic" type="rostopic" name="odom_echo" args="hz /test/odom" output="screen"/>
+</launch>

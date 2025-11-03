@@ -10,7 +10,7 @@
 
 #include "mpc_fsm.h"
 #include <uav_utils/converters.h>
-#include "geometry_msgs/Accel.h"
+#include "geometry_msgs/AccelStamped.h"
 #include "std_msgs/Float64MultiArray.h"
 #include "visualization_msgs/Marker.h"
 #include <std_srvs/Empty.h>
@@ -54,7 +54,7 @@ namespace PayloadMPC
 	controller_.resetThrustMapping();
 
 	pub_force_marker_ = nh_.advertise<visualization_msgs::Marker>("mpc/force_marker", 1);
-	pub_force_ = nh_.advertise<geometry_msgs::Accel>("mpc/force", 1);
+	pub_force_ = nh_.advertise<geometry_msgs::AccelStamped>("mpc/force", 1);
 
 	pub_cable_ = nh_.advertise<geometry_msgs::PoseStamped>("mpc/cable_dir_reference", 1);
 
@@ -619,13 +619,15 @@ namespace PayloadMPC
 		// Publish the force
 		if (pub_force_.getNumSubscribers() > 0 || pub_force_marker_.getNumSubscribers() > 0)
 		{
-			geometry_msgs::Accel force_msg;
-			force_msg.linear.x = fl_(0);
-			force_msg.linear.y = fl_(1);
-			force_msg.linear.z = fl_(2);
-			force_msg.angular.x = fq_(0);
-			force_msg.angular.y = fq_(1);
-			force_msg.angular.z = fq_(2);
+			geometry_msgs::AccelStamped force_msg;
+			force_msg.header.frame_id = "world";
+			force_msg.header.stamp = odom_data.rcv_stamp.isZero() ? ros::Time::now() : odom_data.rcv_stamp;
+			force_msg.accel.linear.x = fl_(0);
+			force_msg.accel.linear.y = fl_(1);
+			force_msg.accel.linear.z = fl_(2);
+			force_msg.accel.angular.x = fq_(0);
+			force_msg.accel.angular.y = fq_(1);
+			force_msg.accel.angular.z = fq_(2);
 			pub_force_.publish(force_msg);
 
 			visualization_msgs::Marker force_marker;
@@ -1202,6 +1204,12 @@ namespace PayloadMPC
 
 	bool MPCFSM::toggle_offboard_mode(bool on_off)
 	{
+		if (params_.use_simulation_)
+		{
+			ROS_DEBUG("[MPCctrl] toggle_offboard_mode skipped in simulation.");
+			return true;
+		}
+
 		mavros_msgs::SetMode offb_set_mode;
 
 #if (USE_PX4_OR_ARDUPILOT == 0)

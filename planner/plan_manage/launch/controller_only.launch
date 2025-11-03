@@ -20,6 +20,7 @@
   <arg name="init_x" default="5.0"/>
   <arg name="init_y" default="0.0"/>
   <arg name="init_z" default="2.0"/>
+  <arg name="wind_type" default="none"/>
 
   <include file="$(find payload_planner)/launch/replan.launch">
     <arg name="use_planner" value="false"/>
@@ -44,5 +45,6 @@
     <arg name="init_x" value="$(arg init_x)"/>
     <arg name="init_y" value="$(arg init_y)"/>
     <arg name="init_z" value="$(arg init_z)"/>
+    <arg name="wind_type" value="$(arg wind_type)"/>
   </include>
 </launch>

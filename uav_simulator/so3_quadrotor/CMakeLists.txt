@@ -27,6 +27,7 @@ include_directories(
 
 add_library(${PROJECT_NAME}_nodelet
   src/${PROJECT_NAME}_nodelet.cpp
+  src/wind_field_factory.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_nodelet

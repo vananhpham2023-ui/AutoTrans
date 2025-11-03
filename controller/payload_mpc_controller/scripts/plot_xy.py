@@ -9,6 +9,7 @@ HEIGHT = 720
 MARGIN = 60
 LEGEND_SPACE = 220
 LINE_WIDTH = 2.5
+FRAME_PADDING = 20
 COLORS = {
     "quad_ref": "#FFD43B",
     "quad_actual": "#1F77B4",
@@ -96,7 +97,6 @@ svg = []
 svg.append('<?xml version="1.0" encoding="UTF-8"?>')
 svg.append(f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">')
 svg.append('<rect x="0" y="0" width="100%" height="100%" fill="#FFFFFF"/>')
-svg.append(f'<rect x="{MARGIN}" y="{MARGIN}" width="{plot_width}" height="{plot_height}" fill="none" stroke="#E0E0E0" stroke-width="1"/>')
 
 for name, pts in series.items():
     if len(pts) < 2:
@@ -108,11 +108,9 @@ for name, pts in series.items():
     polyline = build_polyline(transformed)
     svg.append(f'<polyline fill="none" stroke="{color}" stroke-width="{LINE_WIDTH}"{dash_attr} points="{polyline}"/>')
 
-legend_width = LEGEND_SPACE - 40
-legend_height = 120
+legend_width = LEGEND_SPACE - 5
 legend_x = MARGIN + plot_width + 20
 legend_y = MARGIN
-svg.append(f'<rect x="{legend_x}" y="{legend_y}" width="{legend_width}" height="{legend_height}" fill="#FFFFFF" stroke="#B0B0B0" stroke-width="1" opacity="0.9"/>')
 
 legend_items = [
     ("Quad Ref", "quad_ref"),
@@ -120,20 +118,45 @@ legend_items = [
     ("Payload Ref", "payload_ref"),
     ("Payload Actual", "payload_actual"),
 ]
-legend_line_y = legend_y + 25
+legend_padding_top = 20
+legend_padding_bottom = 16
+legend_item_spacing = 26
+legend_metric_gap = 12
+legend_metric_spacing = 22
+legend_line_y = legend_y + legend_padding_top
 legend_line_x1 = legend_x + 15
-legend_line_x2 = legend_line_x1 + 50
+legend_line_x2 = legend_line_x1 + 55
+legend_svg_elements = []
 
 for label, name in legend_items:
     color = COLORS.get(name, '#000000')
     dash = STYLES.get(name)
     dash_attr = f' stroke-dasharray="{dash}"' if dash else ''
-    svg.append(f'<line x1="{legend_line_x1}" y1="{legend_line_y}" x2="{legend_line_x2}" y2="{legend_line_y}" stroke="{color}" stroke-width="{LINE_WIDTH}"{dash_attr}/>' )
-    svg.append(f'<text x="{legend_line_x2 + 10}" y="{legend_line_y + 5}" font-size="16" fill="#333333">{label}</text>')
-    legend_line_y += 22
+    legend_svg_elements.append(f'<line x1="{legend_line_x1}" y1="{legend_line_y}" x2="{legend_line_x2}" y2="{legend_line_y}" stroke="{color}" stroke-width="{LINE_WIDTH}"{dash_attr}/>')
+    legend_svg_elements.append(f'<text x="{legend_line_x2 + 10}" y="{legend_line_y + 5}" font-size="16" fill="#333333">{label}</text>')
+    legend_line_y += legend_item_spacing
 
-svg.append(f'<text x="{legend_x + 15}" y="{legend_y + legend_height - 40}" font-size="16" fill="#333333">Quad RMSE: {quad_rmse:.3f} m</text>')
-svg.append(f'<text x="{legend_x + 15}" y="{legend_y + legend_height - 20}" font-size="16" fill="#333333">Payload RMSE: {payload_rmse:.3f} m</text>')
+rmse_y1 = legend_line_y + legend_metric_gap
+legend_svg_elements.append(f'<text x="{legend_x + 15}" y="{rmse_y1}" font-size="16" fill="#333333">Quad RMSE: {quad_rmse:.3f} m</text>')
+rmse_y2 = rmse_y1 + legend_metric_spacing
+legend_svg_elements.append(f'<text x="{legend_x + 15}" y="{rmse_y2}" font-size="16" fill="#333333">Payload RMSE: {payload_rmse:.3f} m</text>')
+
+legend_bottom = rmse_y2 + legend_padding_bottom
+legend_height = legend_bottom - legend_y
+svg.append(f'<rect x="{legend_x}" y="{legend_y}" width="{legend_width}" height="{legend_height}" fill="#FFFFFF" stroke="#B0B0B0" stroke-width="1" opacity="0.9"/>')
+svg.extend(legend_svg_elements)
+
+content_left = MARGIN
+content_top = MARGIN
+content_right = max(MARGIN + plot_width, legend_x + legend_width)
+content_bottom = max(MARGIN + plot_height, legend_bottom)
+frame_x = content_left - FRAME_PADDING
+frame_y = content_top - FRAME_PADDING
+frame_width = (content_right - content_left) + 2 * FRAME_PADDING
+frame_height = (content_bottom - content_top) + 2 * FRAME_PADDING
+svg.insert(3, f'<rect x="{frame_x:.1f}" y="{frame_y:.1f}" width="{frame_width:.1f}" height="{frame_height:.1f}" fill="#FFFFFF" stroke="#D0D0D0" stroke-width="1.2"/>')
+
+svg.append('</svg>')
 
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 with open(output_path, 'w') as f:

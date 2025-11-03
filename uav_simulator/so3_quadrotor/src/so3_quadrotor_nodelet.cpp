@@ -6,10 +6,15 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 
+#include <algorithm>
+#include <geometry_msgs/AccelStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_broadcaster.h>
 #include <mavros_msgs/AttitudeTarget.h>
 #include <random>
+
+#include "so3_quadrotor/wind_field/wind_field.h"
 namespace so3_quadrotor {
 
 class Nodelet : public nodelet::Nodelet {
@@ -18,7 +23,7 @@ class Nodelet : public nodelet::Nodelet {
   Control control_;
   Cmd cmd_;
   ros::Publisher odom_pub_, imu_pub_, vis_pub_,odom_payload_pub_,cable_info_pub_;
-  ros::Publisher rpm_pub_,load_imu_pub_;
+  ros::Publisher rpm_pub_,load_imu_pub_, true_force_pub_, wind_pub_;
   ros::Subscriber cmd_sub_;
   ros::Timer simulation_timer;
   tf::TransformBroadcaster tf_br_;
@@ -26,6 +31,12 @@ class Nodelet : public nodelet::Nodelet {
   std::default_random_engine generator;
   std::normal_distribution<double> distribution{0.0,1.0};
   double l_length;
+  double true_force_rate_ = 100.0;
+  ros::Duration odom_period_;
+  ros::Duration true_force_period_;
+  ros::Time next_odom_pub_time_;
+  ros::Time next_true_force_pub_time_;
+  bool time_initialized_ = false;
   // parameters
   int simulation_rate_ = 1e3;
   int odom_rate_ = 400;
@@ -39,6 +50,8 @@ class Nodelet : public nodelet::Nodelet {
   visualization_msgs::MarkerArray vis_msg_;
   double payload_size_;
   double motor_yaw_[4] = {0,0,0,0};
+  std::unique_ptr<wind::WindFieldBase> wind_field_;
+  geometry_msgs::Vector3Stamped wind_msg_;
 
   // 三维高斯噪声生成器
   // @param std 噪声标准差
@@ -76,6 +89,12 @@ class Nodelet : public nodelet::Nodelet {
   // 4. 发布TF/里程计/IMU/RPM等数据
   // 5. 更新螺旋桨/负载可视化
   void timer_callback(const ros::TimerEvent& event) {
+    const ros::Time current_time = event.current_expected;
+    if (!time_initialized_) {
+      next_odom_pub_time_ = current_time;
+      next_true_force_pub_time_ = current_time;
+      time_initialized_ = true;
+    }
     auto last_control = control_;
     control_ = quadrotorPtr_->getControl(cmd_);
     for (size_t i = 0; i < 4; ++i) {
@@ -84,6 +103,26 @@ class Nodelet : public nodelet::Nodelet {
     }
     quadrotorPtr_->setInput(control_.rpm[0], control_.rpm[1], control_.rpm[2], control_.rpm[3]);
     quadrotorPtr_->step(1.0/simulation_rate_);
+    Eigen::Vector3d wind_quad = Eigen::Vector3d::Zero();
+    Eigen::Vector3d wind_load = Eigen::Vector3d::Zero();
+    if (wind_field_) {
+      wind_quad = wind_field_->sample(quadrotorPtr_->getPos(), current_time.toSec());
+      wind_load = wind_field_->sample(quadrotorPtr_->getLoadPos(), current_time.toSec());
+    }
+    quadrotorPtr_->setWindVelocity(wind_quad, wind_load);
+    if (wind_pub_) {
+      wind_msg_.header.stamp = current_time;
+      wind_msg_.vector.x = wind_quad.x();
+      wind_msg_.vector.y = wind_quad.y();
+      wind_msg_.vector.z = wind_quad.z();
+      wind_pub_.publish(wind_msg_);
+    }
+
+    if (vis_msg_.markers.size() < 8)
+    {
+      ROS_WARN_THROTTLE(1.0, "[so3_quadrotor_nodelet] Marker array not ready yet (size=%zu)", vis_msg_.markers.size());
+      return;
+    }
     const Eigen::Vector3d&     pos = quadrotorPtr_->getPos() + guass_random(noise_uav_);
     const Eigen::Vector3d&     vel = quadrotorPtr_->getVel() + guass_random(noise_vel_uav_);
     Eigen::Vector3d     acc = quadrotorPtr_->getQuadAcc() + guass_random(noise_acc_uav_);
@@ -105,10 +144,8 @@ class Nodelet : public nodelet::Nodelet {
 
     acc = quat.toRotationMatrix().transpose() *acc; //Convert to inertial frame 转换为惯性坐标系
 
-    static ros::Time next_odom_pub_time = ros::Time::now();
-    ros::Time tnow = ros::Time::now();
-    if (tnow >= next_odom_pub_time) {
-      next_odom_pub_time += ros::Duration(1.0/odom_rate_);
+    if (current_time >= next_odom_pub_time_) {
+      next_odom_pub_time_ += odom_period_;
       // const Eigen::Vector3d&     pos = quadrotorPtr_->getPos() + guass_random(noise_uav_);
       // const Eigen::Vector3d&     vel = quadrotorPtr_->getVel() ;
       // const Eigen::Vector3d&     acc = quadrotorPtr_->getAcc() ;
@@ -122,9 +159,9 @@ class Nodelet : public nodelet::Nodelet {
       tf::Transform transform;
       transform.setOrigin( tf::Vector3(pos.x(), pos.y(), pos.z()) );
       transform.setRotation( tf::Quaternion(quat.x(), quat.y(), quat.z(), quat.w()) );
-      tf_br_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "body"));
+      tf_br_.sendTransform(tf::StampedTransform(transform, current_time, "world", "body"));
       // odom
-      odom_msg_.header.stamp = tnow;
+      odom_msg_.header.stamp = current_time;
       odom_msg_.pose.pose.position.x = pos(0) ;
       odom_msg_.pose.pose.position.y = pos(1) ;
       odom_msg_.pose.pose.position.z = pos(2) ;
@@ -143,7 +180,7 @@ class Nodelet : public nodelet::Nodelet {
       odom_pub_.publish(odom_msg_);
 
       // odom payload
-      odom_payload_msg_.header.stamp = tnow;
+      odom_payload_msg_.header.stamp = current_time;
       odom_payload_msg_.pose.pose.position.x = pos_l(0) ;
       odom_payload_msg_.pose.pose.position.y = pos_l(1) ;
       odom_payload_msg_.pose.pose.position.z = pos_l(2) ;
@@ -161,7 +198,7 @@ class Nodelet : public nodelet::Nodelet {
       odom_payload_msg_.twist.twist.angular.z = dq(2);
       odom_payload_pub_.publish(odom_payload_msg_);
       // imu
-      imu_msg_.header.stamp = tnow;
+      imu_msg_.header.stamp = current_time;
       imu_msg_.orientation.x = quat.x();
       imu_msg_.orientation.y = quat.y();
       imu_msg_.orientation.z = quat.z();
@@ -177,7 +214,7 @@ class Nodelet : public nodelet::Nodelet {
       imu_pub_.publish(imu_msg_);
 
       //cable info
-      cable_info_msg_.header.stamp = tnow;
+      cable_info_msg_.header.stamp = current_time;
       cable_info_msg_.orientation.x = 0;
       cable_info_msg_.orientation.y = 0;
       cable_info_msg_.orientation.z = 0;
@@ -276,6 +313,22 @@ class Nodelet : public nodelet::Nodelet {
 
       vis_pub_.publish(vis_msg_);
     }
+
+    if (true_force_pub_ && current_time >= next_true_force_pub_time_) {
+      next_true_force_pub_time_ += true_force_period_;
+      geometry_msgs::AccelStamped true_force_msg;
+      true_force_msg.header.stamp = current_time;
+      true_force_msg.header.frame_id = "world";
+      const Eigen::Vector3d fq_true = quadrotorPtr_->getTrueQuadForce();
+      const Eigen::Vector3d fl_true = quadrotorPtr_->getTrueLoadForce();
+      true_force_msg.accel.linear.x = fl_true.x();
+      true_force_msg.accel.linear.y = fl_true.y();
+      true_force_msg.accel.linear.z = fl_true.z();
+      true_force_msg.accel.angular.x = fq_true.x();
+      true_force_msg.accel.angular.y = fq_true.y();
+      true_force_msg.accel.angular.z = fq_true.z();
+      true_force_pub_.publish(true_force_msg);
+    }
   }
  public:
   //这段代码实现了Nodelet类的onInit方法，这是ROS节点初始化的核心入口函数，负责完成仿真器的所有初始化工作
@@ -323,7 +376,20 @@ class Nodelet : public nodelet::Nodelet {
   nh.getParam("min_rpm", config.min_rpm);
   nh.getParam("simulation_rate", simulation_rate_);
   nh.getParam("odom_rate", odom_rate_);
+  nh.param("true_force_rate", true_force_rate_, 100.0);
   nh.getParam("payload_size", payload_size_);
+
+  if (odom_rate_ <= 0) {
+    ROS_WARN("Invalid odom_rate (%d), fallback to 400 Hz", odom_rate_);
+    odom_rate_ = 400;
+  }
+  odom_period_ = ros::Duration(1.0 / static_cast<double>(odom_rate_));
+
+  if (true_force_rate_ <= 0.0) {
+    ROS_WARN("Invalid true_force_rate (%.2f), fallback to odom_rate", true_force_rate_);
+    true_force_rate_ = static_cast<double>(odom_rate_);
+  }
+  true_force_period_ = ros::Duration(1.0 / true_force_rate_);
   
   // 加载噪声参数
   nh.param("noise_uav", noise_uav_,0.0);
@@ -335,13 +401,21 @@ class Nodelet : public nodelet::Nodelet {
   nh.param("noise_rpm", noise_rpm_,0.0);
   
   std::vector<double> kom;
-  nh.getParam("kOmega", kom);
+  if (!nh.getParam("kOmega", kom) || kom.size() < 3)
+  {
+    ROS_ERROR("[so3_quadrotor] Parameter kOmega missing or incomplete; using defaults [3,3,3].");
+    kom = {3.0, 3.0, 3.0};
+  }
   for (size_t i = 0; i < 3; i++)
   {
     config.kOmega[i] = kom[i];
   }
   std::vector<double> kdom;
-  nh.getParam("kdOmega", kdom);
+  if (!nh.getParam("kdOmega", kdom) || kdom.size() < 3)
+  {
+    ROS_ERROR("[so3_quadrotor] Parameter kdOmega missing or incomplete; using defaults [15,15,15].");
+    kdom = {15.0, 15.0, 15.0};
+  }
   for (size_t i = 0; i < 3; i++)
   {
     config.kdOmega[i] = kdom[i];
@@ -390,12 +464,21 @@ class Nodelet : public nodelet::Nodelet {
   cable_info_pub_  = nh.advertise<sensor_msgs::Imu>("cable_info", 10);
   load_imu_pub_ = nh.advertise<sensor_msgs::Imu>("load_imu", 10);
   vis_pub_= nh.advertise<visualization_msgs::MarkerArray>("vis", 10);
+  wind_pub_ = nh.advertise<geometry_msgs::Vector3Stamped>("wind", 10);
+  true_force_pub_ = nh.advertise<geometry_msgs::AccelStamped>("true_force", 10);
   cmd_sub_  = nh.subscribe<mavros_msgs::AttitudeTarget>("so3cmd", 10, &Nodelet::cmd_callback, this, ros::TransportHints().tcpNoDelay());
   rpm_pub_ = nh.advertise<mavros_msgs::ESCTelemetry>("rpm", 10);
-  simulation_timer = nh.createTimer(ros::Duration(1.0/simulation_rate_), &Nodelet::timer_callback, this);
-  
   odom_msg_.header.frame_id = "world";
   imu_msg_ .header.frame_id = "world";
+
+  ros::NodeHandle wind_nh(nh, "wind");
+  ROS_INFO("[so3_quadrotor_nodelet] Loading wind field configuration.");
+  wind_field_ = wind::createWindField(wind_nh);
+  if (!wind_field_)
+  {
+    ROS_WARN("[so3_quadrotor_nodelet] Wind field instance is null; defaulting to zero wind.");
+  }
+  wind_msg_.header.frame_id = "world";
 
   // 4. 可视化设置
   // - 创建可视化标记发布者（四旋翼、负载、缆绳等） - 设置标记属性（颜色、大小、形状等）
@@ -449,6 +532,8 @@ class Nodelet : public nodelet::Nodelet {
     // drone_body.scale.y = config.arm_length;
     // drone_body.scale.x = 0.1 * config.arm_length;
     // vis_msg_.markers.push_back(payload);
+
+  simulation_timer = nh.createTimer(ros::Duration(1.0/simulation_rate_), &Nodelet::timer_callback, this);
   }
 };
 

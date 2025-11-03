@@ -71,6 +71,7 @@ roslaunch payload_planner controller_only.launch trajectory_mode:=helix
   - `rostopic echo /mpc_controller_node/mpc/trajectory_predicted`
   - RViz 自动加载 `controller_only.rviz`，仅保留控制相关显示；`Geometry` MarkerArray 渲染当前（实际/预测）无人机、载荷及缆绳模型，参考轨迹保留为 Path 方便对比。
 - 解析模式运行 10 个周期后，控制节点会在日志中输出无人机/载荷的 RMSE，并在 `payload_mpc_controller/plots/` 下生成 `analytic_xy.csv` 与 `analytic_xy.svg`（图像会通过 `xdg-open` 自动弹出）。
+- 若启用外力估计器（默认开启），仿真器会额外发布 `/true_force` 真值并与 `/mpc/force` 估计值对齐；`force_data_recorder` 会在 `plots/` 目录下写出 `force_comparison.csv/.png`，终端同步打印 RMSE。
 - 想要在线切换轨迹，可执行：
   ```bash
   rosparam set /mpc_controller_node/reference/mode circle
@@ -89,6 +90,57 @@ roslaunch payload_planner replan.launch use_planner:=true
   → 全量仿真视图（含地图、障碍物等）。
 - `roslaunch payload_planner rviz.launch use_planner:=false`  
   → 控制-only 视图（聚焦无人机-负载状态）。
+
+### Step 4：外力估计 & 风场可视化
+
+- `controller_only.launch` / `replan.launch` 会自动启动 `force_data_recorder` 节点，基于 `message_filters::Synchronizer` 对齐 `/true_force`、`/mpc/force`（`geometry_msgs::AccelStamped`）以及可选 `/so3_quadrotor/wind`（`geometry_msgs::Vector3Stamped`）。
+
+- 运行约 10 个轨迹周期后，节点会写出 `payload_mpc_controller/plots/force_comparison.csv` 与 `force_comparison.png`，终端汇报负载/无人机的总体及分轴 RMSE；启用风场时 CSV 会追加 `wind_x/y/z` 列。
+
+- 关键话题：`/so3_quadrotor/true_force`（线速度=负载 `fl`，角速度=无人机 `fq`）、`/mpc_controller_node/mpc/force`（估计值）、`/so3_quadrotor/wind`（当前风速）。
+
+- 风场示例：
+  ```bash
+  # 无风
+  roslaunch payload_planner controller_only.launch wind_type:=none
+  # 恒定风（幅值/方向由 YAML 配置）
+  roslaunch payload_planner controller_only.launch wind_type:=constant
+  # 周期阵风：正弦 / 方波
+  roslaunch payload_planner controller_only.launch wind_type:=gust wind/gust/mode:=sine   wind/gust/amplitude:=0.4 wind/gust/frequency:=0.3
+  roslaunch payload_planner controller_only.launch wind_type:=gust wind/gust/mode:=square wind/gust/amplitude:=0.4 wind/gust/frequency:=0.3 wind/gust/duty_cycle:=0.4
+  # Dryden 湍流
+  roslaunch payload_planner controller_only.launch wind_type:=dryden wind/dryden/sigma:=[0.5,0.5,0.2]
+  ```
+
+- 轨迹/风场组合速查（控制-only 模式）：
+  ```bash
+  # 圆轨迹 + 无风
+  roslaunch payload_planner controller_only.launch trajectory_mode:=circle      wind_type:=none
+  # 八字轨迹 + 恒定 1 m/s 东风（假设配置文件已给出速度/方向）
+  roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight wind_type:=constant
+  # 螺旋轨迹 + 正弦阵风（自定义振幅/频率）
+  roslaunch payload_planner controller_only.launch trajectory_mode:=helix       wind_type:=gust   wind/gust/mode:=sine   wind/gust/amplitude:=0.6 wind/gust/frequency:=0.25
+  # 圆轨迹 + 方波阵风（占空比 40%）
+  roslaunch payload_planner controller_only.launch trajectory_mode:=circle      wind_type:=gust   wind/gust/mode:=square wind/gust/amplitude:=0.4 wind/gust/frequency:=0.3 wind/gust/duty_cycle:=0.4
+  # 解析轨迹 + Dryden 湍流（按需要覆盖 sigma 等参数）
+  roslaunch payload_planner controller_only.launch trajectory_mode:=helix       wind_type:=dryden wind/dryden/sigma:=[0.5,0.5,0.2]
+  ```
+
+- 若希望在规划器模式下指定风场，可直接在 `replan.launch` 中附加同样的风场参数；例如：
+  ```bash
+  roslaunch payload_planner replan.launch use_planner:=true wind_type:=gust wind/gust/mode:=sine wind/gust/amplitude:=0.5 wind/gust/frequency:=0.2
+  ```
+
+- 启动后也可通过 rosparam 在线切换轨迹与风场：
+  ```bash
+  rosparam set /mpc_controller_node/reference/mode figure_eight
+  rosparam set /payload_planner/simulator/wind/type gust
+  rosparam set /payload_planner/simulator/wind/gust/amplitude 0.3
+  ```
+
+- 若环境缺少 `python-dateutil` 或 GUI，脚本会自动启用轻量级兼容层，在 headless 场景仍可生成 PNG；也可使用 `rosrun payload_mpc_controller plot_force_comparison.py` 离线重绘。
+
+
 
 ---
 
