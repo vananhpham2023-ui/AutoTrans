@@ -27,34 +27,102 @@
   <arg name="wind_dryden_length_scale" default="[50.0,50.0,20.0]"/>
   <arg name="wind_override_yaml" default="{}"/>
 
+  <!-- Scenario presets -->
+  <arg name="scenario" default="custom"/>
+  <arg name="trajectory_preset" default="$(eval ('custom' if arg('scenario')=='custom' or '.' not in arg('scenario') else arg('scenario').split('.',1)[0]))"/>
+  <arg name="wind_preset" default="$(eval ('custom' if arg('scenario')=='custom' or '.' not in arg('scenario') else arg('scenario').split('.',1)[1]))"/>
+
+  <!-- Run tagging & output layout -->
+  <arg name="payload_mpc_controller_dir" default="$(find payload_mpc_controller)"/>
+  <arg name="run_label" default="$(eval arg('scenario') if arg('scenario')!='custom' else 'manual')"/>
+  <arg name="run_label_clean" default="$(eval ''.join([c if (c.isalnum() or c in '-_') else '-' for c in arg('run_label')]))"/>
+  <arg name="run_seed" default="$(anon run)"/>
+  <arg name="run_tag" default="$(eval (arg('run_label_clean') if arg('run_label_clean') else 'run') + '_' + arg('run_seed'))"/>
+  <arg name="run_output_root" default="$(eval arg('payload_mpc_controller_dir') + '/plots/run_' + arg('run_tag'))"/>
+  <arg name="force_output_dir" default="$(eval arg('run_output_root') + '/force')"/>
+  <arg name="pinn_output_dir" default="$(eval arg('run_output_root') + '/pinn')"/>
+  <arg name="analytic_output_dir" default="$(eval arg('run_output_root') + '/analytic')"/>
+
+  <!-- Environment for downstream recorders -->
+  <env name="AUTOTRANS_RUN_TAG" value="$(arg run_tag)"/>
+  <env name="AUTOTRANS_ANALYTIC_DIR" value="$(arg analytic_output_dir)"/>
+  <env name="FORCE_DATA_OUTPUT" value="$(arg force_output_dir)"/>
+  <env name="PINN_DATA_OUTPUT" value="$(arg pinn_output_dir)"/>
+  <env name="PINN_SCENARIO_ID" value="$(arg scenario)"/>
+
+  <!-- Trajectory presets (resolved values) -->
+  <arg name="trajectory_mode_resolved" default="$(eval {'circle':'circle','figure_eight':'figure_eight','helix':'helix'}.get(arg('trajectory_preset'), arg('trajectory_mode')))"/>
+  <arg name="circle_radius_resolved" default="$(eval '3.0' if arg('trajectory_preset')=='circle' else arg('circle_radius'))"/>
+  <arg name="circle_omega_resolved" default="$(eval '0.5' if arg('trajectory_preset')=='circle' else arg('circle_omega'))"/>
+  <arg name="circle_center_x_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='circle' else arg('circle_center_x'))"/>
+  <arg name="circle_center_y_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='circle' else arg('circle_center_y'))"/>
+  <arg name="circle_altitude_resolved" default="$(eval '2.0' if arg('trajectory_preset')=='circle' else arg('circle_altitude'))"/>
+
+  <arg name="figure_radius_resolved" default="$(eval '3.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_radius'))"/>
+  <arg name="figure_omega_resolved" default="$(eval '0.3' if arg('trajectory_preset')=='figure_eight' else arg('figure_omega'))"/>
+  <arg name="figure_center_x_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_center_x'))"/>
+  <arg name="figure_center_y_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_center_y'))"/>
+  <arg name="figure_altitude_resolved" default="$(eval '2.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_altitude'))"/>
+
+  <arg name="helix_radius_resolved" default="$(eval '2.5' if arg('trajectory_preset')=='helix' else arg('helix_radius'))"/>
+  <arg name="helix_omega_resolved" default="$(eval '0.4' if arg('trajectory_preset')=='helix' else arg('helix_omega'))"/>
+  <arg name="helix_center_x_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='helix' else arg('helix_center_x'))"/>
+  <arg name="helix_center_y_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='helix' else arg('helix_center_y'))"/>
+  <arg name="helix_base_altitude_resolved" default="$(eval '1.5' if arg('trajectory_preset')=='helix' else arg('helix_base_altitude'))"/>
+  <arg name="helix_vertical_rate_resolved" default="$(eval '0.2' if arg('trajectory_preset')=='helix' else arg('helix_vertical_rate'))"/>
+  <arg name="helix_revolutions_resolved" default="$(eval '3.0' if arg('trajectory_preset')=='helix' else arg('helix_revolutions'))"/>
+
+  <!-- Wind presets (resolved values) -->
+  <arg name="wind_type_resolved" default="$(eval {'calm_low':'dryden','calm_medium':'dryden','calm_high':'dryden','tail_weak_low':'composite','tail_medium_medium':'composite','tail_medium_high':'composite','tail_strong_low':'composite','tail_strong_medium':'composite','tail_strong_high':'composite','cross_weak_low':'composite','cross_medium_medium':'composite','cross_medium_high':'composite','cross_strong_low':'composite','cross_strong_medium':'composite','cross_strong_high':'composite','diag_weak_low':'composite','diag_medium_medium':'composite','diag_medium_high':'composite','diag_strong_low':'composite','diag_strong_medium':'composite','diag_strong_high':'composite'}.get(arg('wind_preset'), arg('wind_type')))"/>
+  <arg name="wind_constant_velocity_resolved" default="$(eval {'calm_low':'[0.0,0.0,0.0]','calm_medium':'[0.0,0.0,0.0]','calm_high':'[0.0,0.0,0.0]','tail_weak_low':'[2.0,0.0,0.0]','tail_medium_medium':'[5.0,0.0,0.0]','tail_medium_high':'[5.0,0.0,0.0]','tail_strong_low':'[9.0,0.0,0.0]','tail_strong_medium':'[9.0,0.0,0.0]','tail_strong_high':'[9.0,0.0,0.0]','cross_weak_low':'[0.0,2.0,0.0]','cross_medium_medium':'[0.0,5.0,0.0]','cross_medium_high':'[0.0,5.0,0.0]','cross_strong_low':'[0.0,9.0,0.0]','cross_strong_medium':'[0.0,9.0,0.0]','cross_strong_high':'[0.0,9.0,0.0]','diag_weak_low':'[1.414,1.414,0.0]','diag_medium_medium':'[3.536,3.536,0.0]','diag_medium_high':'[3.536,3.536,0.0]','diag_strong_low':'[6.364,6.364,0.0]','diag_strong_medium':'[6.364,6.364,0.0]','diag_strong_high':'[6.364,6.364,0.0]'}.get(arg('wind_preset'), arg('wind_constant_velocity')))"/>
+  <arg name="wind_dryden_sigma_resolved" default="$(eval {'calm_low':'[0.6,0.6,0.3]','calm_medium':'[1.5,1.5,0.5]','calm_high':'[2.5,2.5,0.8]','tail_weak_low':'[0.6,0.6,0.3]','tail_medium_medium':'[1.5,1.5,0.5]','tail_medium_high':'[2.5,2.5,0.8]','tail_strong_low':'[0.6,0.6,0.3]','tail_strong_medium':'[1.5,1.5,0.5]','tail_strong_high':'[2.5,2.5,0.8]','cross_weak_low':'[0.6,0.6,0.3]','cross_medium_medium':'[1.5,1.5,0.5]','cross_medium_high':'[2.5,2.5,0.8]','cross_strong_low':'[0.6,0.6,0.3]','cross_strong_medium':'[1.5,1.5,0.5]','cross_strong_high':'[2.5,2.5,0.8]','diag_weak_low':'[0.6,0.6,0.3]','diag_medium_medium':'[1.5,1.5,0.5]','diag_medium_high':'[2.5,2.5,0.8]','diag_strong_low':'[0.6,0.6,0.3]','diag_strong_medium':'[1.5,1.5,0.5]','diag_strong_high':'[2.5,2.5,0.8]'}.get(arg('wind_preset'), arg('wind_dryden_sigma')))"/>
+  <arg name="wind_dryden_length_scale_resolved" default="$(eval {'calm_low':'[12.0,12.0,6.0]','calm_medium':'[18.0,18.0,9.0]','calm_high':'[25.0,25.0,12.0]','tail_weak_low':'[12.0,12.0,6.0]','tail_medium_medium':'[18.0,18.0,9.0]','tail_medium_high':'[25.0,25.0,12.0]','tail_strong_low':'[12.0,12.0,6.0]','tail_strong_medium':'[18.0,18.0,9.0]','tail_strong_high':'[25.0,25.0,12.0]','cross_weak_low':'[12.0,12.0,6.0]','cross_medium_medium':'[18.0,18.0,9.0]','cross_medium_high':'[25.0,25.0,12.0]','cross_strong_low':'[12.0,12.0,6.0]','cross_strong_medium':'[18.0,18.0,9.0]','cross_strong_high':'[25.0,25.0,12.0]','diag_weak_low':'[12.0,12.0,6.0]','diag_medium_medium':'[18.0,18.0,9.0]','diag_medium_high':'[25.0,25.0,12.0]','diag_strong_low':'[12.0,12.0,6.0]','diag_strong_medium':'[18.0,18.0,9.0]','diag_strong_high':'[25.0,25.0,12.0]'}.get(arg('wind_preset'), arg('wind_dryden_length_scale')))"/>
+  <arg name="wind_override_yaml_resolved" default="$(eval ('{dryden: {seed: %d}}' % {'calm_low':1101,'calm_medium':1102,'calm_high':1103,'tail_weak_low':1201,'tail_medium_medium':1202,'tail_medium_high':1203,'tail_strong_low':1204,'tail_strong_medium':1205,'tail_strong_high':1206,'cross_weak_low':1301,'cross_medium_medium':1302,'cross_medium_high':1303,'cross_strong_low':1304,'cross_strong_medium':1305,'cross_strong_high':1306,'diag_weak_low':1401,'diag_medium_medium':1402,'diag_medium_high':1403,'diag_strong_low':1404,'diag_strong_medium':1405,'diag_strong_high':1406}[arg('wind_preset')]) if arg('wind_preset') in ['calm_low','calm_medium','calm_high','tail_weak_low','tail_medium_medium','tail_medium_high','tail_strong_low','tail_strong_medium','tail_strong_high','cross_weak_low','cross_medium_medium','cross_medium_high','cross_strong_low','cross_strong_medium','cross_strong_high','diag_weak_low','diag_medium_medium','diag_medium_high','diag_strong_low','diag_strong_medium','diag_strong_high'] else arg('wind_override_yaml'))"/>
+
   <include file="$(find payload_planner)/launch/replan.launch">
     <arg name="use_planner" value="false"/>
-    <arg name="trajectory_mode" value="$(arg trajectory_mode)"/>
-    <arg name="circle_radius" value="$(arg circle_radius)"/>
-    <arg name="circle_omega" value="$(arg circle_omega)"/>
-    <arg name="circle_center_x" value="$(arg circle_center_x)"/>
-    <arg name="circle_center_y" value="$(arg circle_center_y)"/>
-    <arg name="circle_altitude" value="$(arg circle_altitude)"/>
-    <arg name="figure_radius" value="$(arg figure_radius)"/>
-    <arg name="figure_omega" value="$(arg figure_omega)"/>
-    <arg name="figure_center_x" value="$(arg figure_center_x)"/>
-    <arg name="figure_center_y" value="$(arg figure_center_y)"/>
-    <arg name="figure_altitude" value="$(arg figure_altitude)"/>
-    <arg name="helix_radius" value="$(arg helix_radius)"/>
-    <arg name="helix_omega" value="$(arg helix_omega)"/>
-    <arg name="helix_center_x" value="$(arg helix_center_x)"/>
-    <arg name="helix_center_y" value="$(arg helix_center_y)"/>
-    <arg name="helix_base_altitude" value="$(arg helix_base_altitude)"/>
-    <arg name="helix_vertical_rate" value="$(arg helix_vertical_rate)"/>
-    <arg name="helix_revolutions" value="$(arg helix_revolutions)"/>
+    <arg name="trajectory_mode" value="$(arg trajectory_mode_resolved)"/>
+    <arg name="circle_radius" value="$(arg circle_radius_resolved)"/>
+    <arg name="circle_omega" value="$(arg circle_omega_resolved)"/>
+    <arg name="circle_center_x" value="$(arg circle_center_x_resolved)"/>
+    <arg name="circle_center_y" value="$(arg circle_center_y_resolved)"/>
+    <arg name="circle_altitude" value="$(arg circle_altitude_resolved)"/>
+    <arg name="figure_radius" value="$(arg figure_radius_resolved)"/>
+    <arg name="figure_omega" value="$(arg figure_omega_resolved)"/>
+    <arg name="figure_center_x" value="$(arg figure_center_x_resolved)"/>
+    <arg name="figure_center_y" value="$(arg figure_center_y_resolved)"/>
+    <arg name="figure_altitude" value="$(arg figure_altitude_resolved)"/>
+    <arg name="helix_radius" value="$(arg helix_radius_resolved)"/>
+    <arg name="helix_omega" value="$(arg helix_omega_resolved)"/>
+    <arg name="helix_center_x" value="$(arg helix_center_x_resolved)"/>
+    <arg name="helix_center_y" value="$(arg helix_center_y_resolved)"/>
+    <arg name="helix_base_altitude" value="$(arg helix_base_altitude_resolved)"/>
+    <arg name="helix_vertical_rate" value="$(arg helix_vertical_rate_resolved)"/>
+    <arg name="helix_revolutions" value="$(arg helix_revolutions_resolved)"/>
     <arg name="init_x" value="$(arg init_x)"/>
     <arg name="init_y" value="$(arg init_y)"/>
     <arg name="init_z" value="$(arg init_z)"/>
-    <arg name="wind_type" value="$(arg wind_type)"/>
-    <arg name="wind_constant_velocity" value="$(arg wind_constant_velocity)"/>
+    <arg name="wind_type" value="$(arg wind_type_resolved)"/>
+    <arg name="wind_constant_velocity" value="$(arg wind_constant_velocity_resolved)"/>
     <arg name="wind_gust_axis" value="$(arg wind_gust_axis)"/>
-    <arg name="wind_dryden_sigma" value="$(arg wind_dryden_sigma)"/>
-    <arg name="wind_dryden_length_scale" value="$(arg wind_dryden_length_scale)"/>
-    <arg name="wind_override_yaml" value="$(arg wind_override_yaml)"/>
+    <arg name="wind_dryden_sigma" value="$(arg wind_dryden_sigma_resolved)"/>
+    <arg name="wind_dryden_length_scale" value="$(arg wind_dryden_length_scale_resolved)"/>
+    <arg name="wind_override_yaml" value="$(arg wind_override_yaml_resolved)"/>
   </include>
+
+  <node pkg="payload_mpc_controller" type="pinn_data_recorder.py" name="pinn_data_recorder" output="screen">
+    <param name="scenario_id" value="$(arg scenario)"/>
+    <param name="output_dir" value="$(arg pinn_output_dir)"/>
+    <param name="run_tag" value="$(arg run_tag)"/>
+    <param name="true_force_topic" value="/so3_quadrotor/true_force"/>
+    <param name="estimated_force_topic" value="/mpc_controller_node/mpc/force"/>
+    <param name="odom_topic" value="/visual_slam/odom"/>
+    <param name="quad_imu_topic" value="/imu"/>
+    <param name="payload_odom_topic" value="/payload_odom"/>
+    <param name="payload_imu_topic" value="/load_imu"/>
+    <param name="cable_topic" value="/cable_info"/>
+    <param name="wind_topic" value="/so3_quadrotor/wind"/>
+    <param name="rpm_topic" value="/rpm"/>
+    <param name="optional_max_delay" value="0.2"/>
+  </node>
 </launch>

@@ -110,6 +110,10 @@ class PinnDataRecorder:
             "~wind_type_hint",
             rospy.get_param("/payload_planner/simulator/wind/type", ""),
         )
+        self.run_tag = rospy.get_param(
+            "~run_tag",
+            os.environ.get("AUTOTRANS_RUN_TAG", time.strftime("run_%Y%m%d_%H%M%S")),
+        )
 
         self.mass_quad = self._resolve_param("/mpc_controller_node/mass_q", 1.150)
         self.mass_load = self._resolve_param("/mpc_controller_node/mass_l", 0.285)
@@ -186,8 +190,10 @@ class PinnDataRecorder:
         )
         os.makedirs(output_dir, exist_ok=True)
         timestamp_str = time.strftime("%Y%m%d_%H%M%S")
-        filename = rospy.get_param("~output_filename", f"pinn_dataset_{timestamp_str}.csv")
+        safe_tag = "".join([c if (c.isalnum() or c in "-_") else "-" for c in self.run_tag])
+        filename = rospy.get_param("~output_filename", f"pinn_dataset_{safe_tag}_{timestamp_str}.csv")
         self.csv_path = os.path.join(output_dir, filename)
+        rospy.loginfo("[pinn_data_recorder] Output CSV: %s", self.csv_path)
         self._csv_file = open(self.csv_path, "w", newline="")
         self._writer = csv.DictWriter(self._csv_file, fieldnames=FIELDNAMES)
         self._writer.writeheader()

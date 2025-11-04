@@ -19,7 +19,9 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <cstdlib>
+#include <cstring>
 #include <cerrno>
+#include <cctype>
 #include <Eigen/Geometry>
 #include <cmath>
 using namespace std;
@@ -27,6 +29,42 @@ using namespace uav_utils;
 #define USE_PX4_OR_ARDUPILOT 1 // 0: px4 1:ardupilot
 namespace PayloadMPC
 {
+
+	namespace
+	{
+	bool makeDirRecursive(const std::string &path)
+	{
+		if (path.empty())
+		{
+			return false;
+		}
+		std::string current;
+		if (!path.empty() && path[0] == '/')
+		{
+			current = "/";
+		}
+		std::stringstream ss(path);
+		std::string piece;
+		bool ok = true;
+		while (std::getline(ss, piece, '/'))
+		{
+			if (piece.empty())
+			{
+				continue;
+			}
+			if (!current.empty() && current.back() != '/')
+			{
+				current.push_back('/');
+			}
+			current += piece;
+			if (::mkdir(current.c_str(), 0755) != 0 && errno != EEXIST)
+			{
+				ok = false;
+			}
+		}
+		return ok;
+	}
+	} // namespace
 
 	MPCFSM::MPCFSM(const ros::NodeHandle &nh, MpcParams &params, MpcController &controller) : nh_(nh),
 																							  params_(params),
@@ -1312,15 +1350,38 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 	}
 	analytic_plot_generated_ = true;
 	std::string package_path = ros::package::getPath("payload_mpc_controller");
-	std::string plot_dir = package_path + "/plots";
-	if (!plot_dir.empty())
+	const char *custom_dir_env = std::getenv("AUTOTRANS_ANALYTIC_DIR");
+	std::string plot_dir = custom_dir_env && std::strlen(custom_dir_env) > 0 ? custom_dir_env : package_path + "/plots";
+	if (!makeDirRecursive(plot_dir))
 	{
-		if (::mkdir(plot_dir.c_str(), 0755) != 0 && errno != EEXIST)
+		ROS_WARN_STREAM("[MPCctrl] Failed to ensure plot directory exists: " << plot_dir);
+	}
+
+	std::string run_tag;
+	if (const char *env_tag = std::getenv("AUTOTRANS_RUN_TAG"))
+	{
+		run_tag = env_tag;
+	}
+	std::string safe_tag;
+	for (char ch : run_tag)
+	{
+		if (std::isalnum(static_cast<unsigned char>(ch)) || ch == '-' || ch == '_')
 		{
-			ROS_WARN_STREAM("[MPCctrl] Failed to create plot directory: " << plot_dir);
+			safe_tag.push_back(ch);
+		}
+		else if (ch == '.' || ch == ' ')
+		{
+			safe_tag.push_back('-');
 		}
 	}
-	std::string csv_path = plot_dir + "/analytic_xy.csv";
+	std::string base_name = "analytic_xy";
+	if (!safe_tag.empty())
+	{
+		base_name += "_";
+		base_name += safe_tag;
+	}
+
+	std::string csv_path = plot_dir + "/" + base_name + ".csv";
 	std::ofstream csv(csv_path.c_str());
 	if (!csv.is_open())
 	{
@@ -1372,9 +1433,10 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 		csv.close();
 	}
 	std::string script = package_path + "/scripts/plot_xy.py";
-	std::string svg_path = plot_dir + "/analytic_xy.svg";
+	std::string svg_path = plot_dir + "/" + base_name + ".svg";
 	std::ostringstream cmd;
-	cmd << "python3 " << script << ' ' << csv_path << ' ' << quad_rmse << ' ' << payload_rmse << ' ' << svg_path;
+	cmd << "python3 \"" << script << "\" \"" << csv_path << "\" "
+		<< quad_rmse << ' ' << payload_rmse << " \"" << svg_path << "\"";
 	int ret = std::system(cmd.str().c_str());
 	if (ret != 0)
 	{

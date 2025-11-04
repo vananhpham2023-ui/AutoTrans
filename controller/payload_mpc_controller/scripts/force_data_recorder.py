@@ -5,6 +5,7 @@ import csv
 import math
 import os
 import threading
+import time
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -55,10 +56,21 @@ class ForceDataRecorder:
         self._last_plot_update = 0.0
 
         pkg_path = rospkg.RosPack().get_path("payload_mpc_controller")
-        plots_dir = os.path.join(pkg_path, "plots")
-        os.makedirs(plots_dir, exist_ok=True)
-        self.csv_path = os.path.join(plots_dir, "force_comparison.csv")
-        self.png_path = os.path.join(plots_dir, "force_comparison.png")
+        default_dir = os.path.join(pkg_path, "plots")
+        run_tag = rospy.get_param(
+            "~run_tag",
+            os.environ.get("AUTOTRANS_RUN_TAG", time.strftime("run_%Y%m%d_%H%M%S")),
+        )
+        output_dir = rospy.get_param(
+            "~output_dir",
+            os.environ.get("FORCE_DATA_OUTPUT", default_dir),
+        )
+        os.makedirs(output_dir, exist_ok=True)
+        safe_tag = ''.join(c if c.isalnum() or c in "-_" else "-" for c in run_tag)
+        prefix = f"force_{safe_tag}"
+        self.csv_path = os.path.join(output_dir, f"{prefix}.csv")
+        self.png_path = os.path.join(output_dir, f"{prefix}.png")
+        rospy.loginfo("[force_data_recorder] Writing outputs under %s (run_tag=%s)", output_dir, safe_tag)
 
         self._cycle_seconds = self._cycle_duration()
         self.report_duration = self._resolve_report_duration()
