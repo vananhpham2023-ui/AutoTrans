@@ -235,9 +235,17 @@ class PinnDataRecorder:
         if sample is None:
             return
 
-        self._writer.writerow(sample)
-        self._csv_file.flush()
-        self.samples_written += 1
+        if self._csv_file.closed:
+            rospy.logwarn_once(
+                "[pinn_data_recorder] CSV file already closed; dropping subsequent samples."
+            )
+        else:
+            self._writer.writerow(sample)
+            self._csv_file.flush()
+            self.samples_written += 1
+
+        if self._csv_file.closed:
+            return
 
         if self.samples_written % 500 == 0:
             rospy.loginfo("[pinn_data_recorder] Recorded %d samples.", self.samples_written)

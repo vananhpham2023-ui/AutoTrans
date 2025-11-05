@@ -104,6 +104,7 @@ namespace PayloadMPC
 		ros::Publisher pub_control_command, pub_predicted_trajectory_, pub_payload_predicted_trajectory_, pub_reference_trajectory_, pub_payload_reference_trajectory_, pub_cable_;
 		ros::Publisher reference_geometry_pub_;
 		ros::Publisher pub_all_ref_data_, pub_rmse_info_;
+		ros::Publisher run_completion_pub_;
 		State_t fsm_state; // Should only be changed in PX4CtrlFSM::process() function!
 
 		Exec_Traj_State_t exec_traj_state_;

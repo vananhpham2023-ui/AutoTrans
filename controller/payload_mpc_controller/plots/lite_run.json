@@ -1,0 +1,83 @@
+[
+  {
+    "scenario": "circle.c1_low",
+    "status": "failed",
+    "samples": 0,
+    "pinn_csv": null,
+    "force_csv": null,
+    "analytic_csv": null,
+    "started_at": null,
+    "finished_at": null,
+    "attempts": 0,
+    "notes": [
+      "Exceeded retry budget"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.c2_medium",
+    "status": "failed",
+    "samples": 0,
+    "pinn_csv": null,
+    "force_csv": null,
+    "analytic_csv": null,
+    "started_at": null,
+    "finished_at": null,
+    "attempts": 0,
+    "notes": [
+      "Exceeded retry budget"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.c3_high",
+    "status": "aborted",
+    "samples": 0,
+    "pinn_csv": null,
+    "force_csv": null,
+    "analytic_csv": null,
+    "started_at": null,
+    "finished_at": null,
+    "attempts": 0,
+    "notes": [
+      "Termination requested"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ]
+    }
+  }
+]

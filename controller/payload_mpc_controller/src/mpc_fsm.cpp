@@ -23,6 +23,8 @@
 #include <cerrno>
 #include <cctype>
 #include <Eigen/Geometry>
+#include <sys/wait.h>
+#include <signal.h>
 #include <cmath>
 using namespace std;
 using namespace uav_utils;
@@ -89,15 +91,16 @@ namespace PayloadMPC
 			nh_.advertise<nav_msgs::Path>("mpc/reference_payload_trajectory", 1);
 		reference_geometry_pub_ =
 			nh_.advertise<visualization_msgs::MarkerArray>("mpc/reference_geometry", 1);
-	controller_.resetThrustMapping();
+		controller_.resetThrustMapping();
 
-	pub_force_marker_ = nh_.advertise<visualization_msgs::Marker>("mpc/force_marker", 1);
-	pub_force_ = nh_.advertise<geometry_msgs::AccelStamped>("mpc/force", 1);
+		pub_force_marker_ = nh_.advertise<visualization_msgs::Marker>("mpc/force_marker", 1);
+		pub_force_ = nh_.advertise<geometry_msgs::AccelStamped>("mpc/force", 1);
 
-	pub_cable_ = nh_.advertise<geometry_msgs::PoseStamped>("mpc/cable_dir_reference", 1);
+		pub_cable_ = nh_.advertise<geometry_msgs::PoseStamped>("mpc/cable_dir_reference", 1);
 
-	pub_rmse_info_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/rmse_info", 1);
-	reference_geometry_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("mpc/reference_geometry", 1);
+		pub_rmse_info_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/rmse_info", 1);
+		run_completion_pub_ = nh_.advertise<std_msgs::Empty>("/mpc/run_completed", 1, true);
+		reference_geometry_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("mpc/reference_geometry", 1);
 	analytic_rmse_sum_quad_ = 0.0;
 	analytic_rmse_sum_payload_ = 0.0;
 	analytic_rmse_samples_ = 0;
@@ -1460,16 +1463,61 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 		if (quit_client.call(srv))
 		{
 			rviz_closed = true;
+			ROS_INFO("[MPCctrl] RViz closed via service call.");
 		}
 	}
 	if (!rviz_closed)
 	{
-		int kill_ret = std::system("rosnode kill /rviz >/dev/null 2>&1");
-		if (kill_ret != 0)
+		// rosnode kill requires ROS master connection, use pkill instead
+		int kill_ret = std::system("pkill -SIGTERM -f 'rviz.*controller_only.rviz' >/dev/null 2>&1");
+		if (kill_ret == -1)
 		{
-			ROS_WARN_STREAM("[MPCctrl] Unable to close RViz automatically. Please close it manually.");
+			const int errsv = errno;
+			ROS_WARN_STREAM("[MPCctrl] Unable to close RViz automatically (pkill failed: " << std::strerror(errsv) << "). Please close it manually.");
+		}
+		else if (WIFEXITED(kill_ret))
+		{
+			const int exit_status = WEXITSTATUS(kill_ret);
+			if (exit_status == 0)
+			{
+				ROS_INFO("[MPCctrl] RViz closed via pkill.");
+				rviz_closed = true;
+			}
+			else if (exit_status == 1)
+			{
+				ROS_WARN("[MPCctrl] RViz process not found when attempting pkill.");
+			}
+			else
+			{
+				ROS_WARN_STREAM("[MPCctrl] pkill exited with code " << exit_status << ". Please close RViz manually.");
+			}
+		}
+		else if (WIFSIGNALED(kill_ret))
+		{
+			const int term_sig = WTERMSIG(kill_ret);
+			if (term_sig == SIGTERM)
+			{
+				ROS_INFO("[MPCctrl] RViz termination signal sent (pkill self-terminated by SIGTERM).");
+				rviz_closed = true;
+			}
+			else
+			{
+				ROS_WARN_STREAM("[MPCctrl] pkill terminated by signal " << term_sig << ". Please close RViz manually.");
+			}
+		}
+		else
+		{
+			ROS_WARN_STREAM("[MPCctrl] pkill returned unexpected status " << kill_ret << ". Please close RViz manually.");
 		}
 	}
+	// Give RViz time to exit gracefully before roslaunch notices
+	if (rviz_closed)
+	{
+		ros::Duration(0.5).sleep();
+	}
+	std_msgs::Empty completion_msg;
+	run_completion_pub_.publish(completion_msg);
+	ROS_INFO("[MPCctrl] Published run completion signal.");
 }
 
 } // namespace PayloadMPC

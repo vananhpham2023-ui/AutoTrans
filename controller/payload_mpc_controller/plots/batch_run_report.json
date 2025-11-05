@@ -1,0 +1,4071 @@
+[
+  {
+    "scenario": "circle.c1_low",
+    "status": "skipped",
+    "samples": 12006,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251104182953_2_9978/pinn/pinn_dataset_circle-c1_low_20251104182953_2_9978.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251104182953_2_9978/force/force_circle-c1_low_20251104182953_2_9978.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251104182953_2_9978/analytic/analytic_xy_circle-c1_low_20251104182953_2_9978.csv",
+    "started_at": "2025-11-04T18:29:53.636021",
+    "finished_at": "2025-11-04T18:32:51.028160",
+    "attempts": 0,
+    "notes": [
+      "Port 11312 busy, retrying",
+      "Port 11313 busy, retrying",
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.c2_medium",
+    "status": "skipped",
+    "samples": 12084,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c2_medium_20251104183251_1_7826/pinn/pinn_dataset_circle-c2_medium_20251104183251_1_7826.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c2_medium_20251104183251_1_7826/force/force_circle-c2_medium_20251104183251_1_7826.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c2_medium_20251104183251_1_7826/analytic/analytic_xy_circle-c2_medium_20251104183251_1_7826.csv",
+    "started_at": "2025-11-04T18:32:51.152264",
+    "finished_at": "2025-11-04T18:35:48.383342",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.c3_high",
+    "status": "skipped",
+    "samples": 12075,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c3_high_20251104183548_1_5289/pinn/pinn_dataset_circle-c3_high_20251104183548_1_5289.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c3_high_20251104183548_1_5289/force/force_circle-c3_high_20251104183548_1_5289.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c3_high_20251104183548_1_5289/analytic/analytic_xy_circle-c3_high_20251104183548_1_5289.csv",
+    "started_at": "2025-11-04T18:35:48.509185",
+    "finished_at": "2025-11-04T18:38:47.405379",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_medium_high",
+    "status": "skipped",
+    "samples": 12079,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_high_20251104183847_1_7799/pinn/pinn_dataset_circle-w1_medium_high_20251104183847_1_7799.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_high_20251104183847_1_7799/force/force_circle-w1_medium_high_20251104183847_1_7799.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_high_20251104183847_1_7799/analytic/analytic_xy_circle-w1_medium_high_20251104183847_1_7799.csv",
+    "started_at": "2025-11-04T18:38:47.530060",
+    "finished_at": "2025-11-04T18:41:45.972187",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_medium_low",
+    "status": "skipped",
+    "samples": 12077,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_low_20251104184146_1_7347/pinn/pinn_dataset_circle-w1_medium_low_20251104184146_1_7347.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_low_20251104184146_1_7347/force/force_circle-w1_medium_low_20251104184146_1_7347.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_low_20251104184146_1_7347/analytic/analytic_xy_circle-w1_medium_low_20251104184146_1_7347.csv",
+    "started_at": "2025-11-04T18:41:46.093620",
+    "finished_at": "2025-11-04T18:44:44.341789",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_medium_medium",
+    "status": "skipped",
+    "samples": 12086,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_medium_20251104184444_1_2670/pinn/pinn_dataset_circle-w1_medium_medium_20251104184444_1_2670.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_medium_20251104184444_1_2670/force/force_circle-w1_medium_medium_20251104184444_1_2670.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_medium_medium_20251104184444_1_2670/analytic/analytic_xy_circle-w1_medium_medium_20251104184444_1_2670.csv",
+    "started_at": "2025-11-04T18:44:44.494095",
+    "finished_at": "2025-11-04T18:47:43.337388",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_strong_high",
+    "status": "skipped",
+    "samples": 12057,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_high_20251104184743_1_3505/pinn/pinn_dataset_circle-w1_strong_high_20251104184743_1_3505.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_high_20251104184743_1_3505/force/force_circle-w1_strong_high_20251104184743_1_3505.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_high_20251104184743_1_3505/analytic/analytic_xy_circle-w1_strong_high_20251104184743_1_3505.csv",
+    "started_at": "2025-11-04T18:47:43.467722",
+    "finished_at": "2025-11-04T18:50:42.283456",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        9.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_strong_low",
+    "status": "skipped",
+    "samples": 12079,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_low_20251104185042_1_9965/pinn/pinn_dataset_circle-w1_strong_low_20251104185042_1_9965.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_low_20251104185042_1_9965/force/force_circle-w1_strong_low_20251104185042_1_9965.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_low_20251104185042_1_9965/analytic/analytic_xy_circle-w1_strong_low_20251104185042_1_9965.csv",
+    "started_at": "2025-11-04T18:50:42.405912",
+    "finished_at": "2025-11-04T18:53:40.067254",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        9.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_strong_medium",
+    "status": "skipped",
+    "samples": 12075,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_medium_20251104185340_1_6104/pinn/pinn_dataset_circle-w1_strong_medium_20251104185340_1_6104.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_medium_20251104185340_1_6104/force/force_circle-w1_strong_medium_20251104185340_1_6104.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_strong_medium_20251104185340_1_6104/analytic/analytic_xy_circle-w1_strong_medium_20251104185340_1_6104.csv",
+    "started_at": "2025-11-04T18:53:40.190725",
+    "finished_at": "2025-11-04T18:56:39.088949",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        9.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_weak_high",
+    "status": "skipped",
+    "samples": 12084,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_high_20251104185639_1_4387/pinn/pinn_dataset_circle-w1_weak_high_20251104185639_1_4387.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_high_20251104185639_1_4387/force/force_circle-w1_weak_high_20251104185639_1_4387.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_high_20251104185639_1_4387/analytic/analytic_xy_circle-w1_weak_high_20251104185639_1_4387.csv",
+    "started_at": "2025-11-04T18:56:39.213027",
+    "finished_at": "2025-11-04T18:59:28.583808",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_weak_low",
+    "status": "skipped",
+    "samples": 12072,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_low_20251104185928_1_8763/pinn/pinn_dataset_circle-w1_weak_low_20251104185928_1_8763.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_low_20251104185928_1_8763/force/force_circle-w1_weak_low_20251104185928_1_8763.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_low_20251104185928_1_8763/analytic/analytic_xy_circle-w1_weak_low_20251104185928_1_8763.csv",
+    "started_at": "2025-11-04T18:59:28.705562",
+    "finished_at": "2025-11-04T19:02:27.075781",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w1_weak_medium",
+    "status": "skipped",
+    "samples": 12080,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_medium_20251104190227_1_1659/pinn/pinn_dataset_circle-w1_weak_medium_20251104190227_1_1659.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_medium_20251104190227_1_1659/force/force_circle-w1_weak_medium_20251104190227_1_1659.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w1_weak_medium_20251104190227_1_1659/analytic/analytic_xy_circle-w1_weak_medium_20251104190227_1_1659.csv",
+    "started_at": "2025-11-04T19:02:27.213268",
+    "finished_at": "2025-11-04T19:05:24.557418",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_medium_high",
+    "status": "skipped",
+    "samples": 12085,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_high_20251104190524_1_5917/pinn/pinn_dataset_circle-w2_medium_high_20251104190524_1_5917.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_high_20251104190524_1_5917/force/force_circle-w2_medium_high_20251104190524_1_5917.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_high_20251104190524_1_5917/analytic/analytic_xy_circle-w2_medium_high_20251104190524_1_5917.csv",
+    "started_at": "2025-11-04T19:05:24.689258",
+    "finished_at": "2025-11-04T19:08:22.130747",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        5.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_medium_low",
+    "status": "skipped",
+    "samples": 12073,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_low_20251104190822_1_6503/pinn/pinn_dataset_circle-w2_medium_low_20251104190822_1_6503.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_low_20251104190822_1_6503/force/force_circle-w2_medium_low_20251104190822_1_6503.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_low_20251104190822_1_6503/analytic/analytic_xy_circle-w2_medium_low_20251104190822_1_6503.csv",
+    "started_at": "2025-11-04T19:08:22.256465",
+    "finished_at": "2025-11-04T19:11:21.089251",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        5.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_medium_medium",
+    "status": "skipped",
+    "samples": 12081,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_medium_20251104191121_1_2205/pinn/pinn_dataset_circle-w2_medium_medium_20251104191121_1_2205.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_medium_20251104191121_1_2205/force/force_circle-w2_medium_medium_20251104191121_1_2205.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_medium_medium_20251104191121_1_2205/analytic/analytic_xy_circle-w2_medium_medium_20251104191121_1_2205.csv",
+    "started_at": "2025-11-04T19:11:21.225279",
+    "finished_at": "2025-11-04T19:14:19.636679",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        5.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_strong_high",
+    "status": "skipped",
+    "samples": 12058,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_high_20251104191419_1_4972/pinn/pinn_dataset_circle-w2_strong_high_20251104191419_1_4972.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_high_20251104191419_1_4972/force/force_circle-w2_strong_high_20251104191419_1_4972.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_high_20251104191419_1_4972/analytic/analytic_xy_circle-w2_strong_high_20251104191419_1_4972.csv",
+    "started_at": "2025-11-04T19:14:19.767909",
+    "finished_at": "2025-11-04T19:17:18.757785",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_strong_low",
+    "status": "skipped",
+    "samples": 12075,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_low_20251104191718_1_6754/pinn/pinn_dataset_circle-w2_strong_low_20251104191718_1_6754.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_low_20251104191718_1_6754/force/force_circle-w2_strong_low_20251104191718_1_6754.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_low_20251104191718_1_6754/analytic/analytic_xy_circle-w2_strong_low_20251104191718_1_6754.csv",
+    "started_at": "2025-11-04T19:17:18.896288",
+    "finished_at": "2025-11-04T19:20:15.241111",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_strong_medium",
+    "status": "skipped",
+    "samples": 12075,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_medium_20251104192015_1_3617/pinn/pinn_dataset_circle-w2_strong_medium_20251104192015_1_3617.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_medium_20251104192015_1_3617/force/force_circle-w2_strong_medium_20251104192015_1_3617.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_strong_medium_20251104192015_1_3617/analytic/analytic_xy_circle-w2_strong_medium_20251104192015_1_3617.csv",
+    "started_at": "2025-11-04T19:20:15.393263",
+    "finished_at": "2025-11-04T19:23:10.805458",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_weak_high",
+    "status": "skipped",
+    "samples": 12040,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_high_20251104192310_1_1252/pinn/pinn_dataset_circle-w2_weak_high_20251104192310_1_1252.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_high_20251104192310_1_1252/force/force_circle-w2_weak_high_20251104192310_1_1252.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_high_20251104192310_1_1252/analytic/analytic_xy_circle-w2_weak_high_20251104192310_1_1252.csv",
+    "started_at": "2025-11-04T19:23:10.955490",
+    "finished_at": "2025-11-04T19:26:09.898305",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        2.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_weak_low",
+    "status": "skipped",
+    "samples": 12072,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_low_20251104192610_1_1848/pinn/pinn_dataset_circle-w2_weak_low_20251104192610_1_1848.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_low_20251104192610_1_1848/force/force_circle-w2_weak_low_20251104192610_1_1848.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_low_20251104192610_1_1848/analytic/analytic_xy_circle-w2_weak_low_20251104192610_1_1848.csv",
+    "started_at": "2025-11-04T19:26:10.035757",
+    "finished_at": "2025-11-04T19:29:07.875404",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        2.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w2_weak_medium",
+    "status": "skipped",
+    "samples": 11975,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_medium_20251104192908_1_2751/pinn/pinn_dataset_circle-w2_weak_medium_20251104192908_1_2751.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_medium_20251104192908_1_2751/force/force_circle-w2_weak_medium_20251104192908_1_2751.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w2_weak_medium_20251104192908_1_2751/analytic/analytic_xy_circle-w2_weak_medium_20251104192908_1_2751.csv",
+    "started_at": "2025-11-04T19:29:08.024413",
+    "finished_at": "2025-11-04T19:32:07.217142",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        2.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_medium_high",
+    "status": "skipped",
+    "samples": 12075,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_high_20251104193207_1_6642/pinn/pinn_dataset_circle-w3_medium_high_20251104193207_1_6642.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_high_20251104193207_1_6642/force/force_circle-w3_medium_high_20251104193207_1_6642.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_high_20251104193207_1_6642/analytic/analytic_xy_circle-w3_medium_high_20251104193207_1_6642.csv",
+    "started_at": "2025-11-04T19:32:07.360089",
+    "finished_at": "2025-11-04T19:35:06.220861",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        3.536,
+        3.536,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_medium_low",
+    "status": "skipped",
+    "samples": 12078,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_low_20251104193506_1_6637/pinn/pinn_dataset_circle-w3_medium_low_20251104193506_1_6637.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_low_20251104193506_1_6637/force/force_circle-w3_medium_low_20251104193506_1_6637.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_low_20251104193506_1_6637/analytic/analytic_xy_circle-w3_medium_low_20251104193506_1_6637.csv",
+    "started_at": "2025-11-04T19:35:06.343183",
+    "finished_at": "2025-11-04T19:38:04.746743",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        3.536,
+        3.536,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_medium_medium",
+    "status": "skipped",
+    "samples": 12068,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_medium_20251104193804_1_1543/pinn/pinn_dataset_circle-w3_medium_medium_20251104193804_1_1543.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_medium_20251104193804_1_1543/force/force_circle-w3_medium_medium_20251104193804_1_1543.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_medium_medium_20251104193804_1_1543/analytic/analytic_xy_circle-w3_medium_medium_20251104193804_1_1543.csv",
+    "started_at": "2025-11-04T19:38:04.876127",
+    "finished_at": "2025-11-04T19:41:02.223286",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        3.536,
+        3.536,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_strong_high",
+    "status": "skipped",
+    "samples": 12066,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_high_20251104194102_1_9608/pinn/pinn_dataset_circle-w3_strong_high_20251104194102_1_9608.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_high_20251104194102_1_9608/force/force_circle-w3_strong_high_20251104194102_1_9608.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_high_20251104194102_1_9608/analytic/analytic_xy_circle-w3_strong_high_20251104194102_1_9608.csv",
+    "started_at": "2025-11-04T19:41:02.349188",
+    "finished_at": "2025-11-04T19:44:00.660522",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        6.364,
+        6.364,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_strong_low",
+    "status": "skipped",
+    "samples": 12066,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_low_20251104194400_1_8221/pinn/pinn_dataset_circle-w3_strong_low_20251104194400_1_8221.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_low_20251104194400_1_8221/force/force_circle-w3_strong_low_20251104194400_1_8221.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_low_20251104194400_1_8221/analytic/analytic_xy_circle-w3_strong_low_20251104194400_1_8221.csv",
+    "started_at": "2025-11-04T19:44:00.781415",
+    "finished_at": "2025-11-04T19:46:59.085055",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        6.364,
+        6.364,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_strong_medium",
+    "status": "skipped",
+    "samples": 12062,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_medium_20251104194659_1_4617/pinn/pinn_dataset_circle-w3_strong_medium_20251104194659_1_4617.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_medium_20251104194659_1_4617/force/force_circle-w3_strong_medium_20251104194659_1_4617.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_strong_medium_20251104194659_1_4617/analytic/analytic_xy_circle-w3_strong_medium_20251104194659_1_4617.csv",
+    "started_at": "2025-11-04T19:46:59.214765",
+    "finished_at": "2025-11-04T19:49:58.144713",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        6.364,
+        6.364,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_weak_high",
+    "status": "skipped",
+    "samples": 12061,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_high_20251104194958_1_9680/pinn/pinn_dataset_circle-w3_weak_high_20251104194958_1_9680.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_high_20251104194958_1_9680/force/force_circle-w3_weak_high_20251104194958_1_9680.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_high_20251104194958_1_9680/analytic/analytic_xy_circle-w3_weak_high_20251104194958_1_9680.csv",
+    "started_at": "2025-11-04T19:49:58.268848",
+    "finished_at": "2025-11-04T19:52:56.599984",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        1.414,
+        1.414,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_weak_low",
+    "status": "skipped",
+    "samples": 12013,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_low_20251104195256_1_9524/pinn/pinn_dataset_circle-w3_weak_low_20251104195256_1_9524.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_low_20251104195256_1_9524/force/force_circle-w3_weak_low_20251104195256_1_9524.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_low_20251104195256_1_9524/analytic/analytic_xy_circle-w3_weak_low_20251104195256_1_9524.csv",
+    "started_at": "2025-11-04T19:52:56.720993",
+    "finished_at": "2025-11-04T19:55:54.117233",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        1.414,
+        1.414,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w3_weak_medium",
+    "status": "skipped",
+    "samples": 12047,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_medium_20251104195554_1_3517/pinn/pinn_dataset_circle-w3_weak_medium_20251104195554_1_3517.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_medium_20251104195554_1_3517/force/force_circle-w3_weak_medium_20251104195554_1_3517.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w3_weak_medium_20251104195554_1_3517/analytic/analytic_xy_circle-w3_weak_medium_20251104195554_1_3517.csv",
+    "started_at": "2025-11-04T19:55:54.255326",
+    "finished_at": "2025-11-04T19:58:52.096195",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        1.414,
+        1.414,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_medium_high",
+    "status": "skipped",
+    "samples": 12035,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_high_20251104195852_1_7244/pinn/pinn_dataset_circle-w4_medium_high_20251104195852_1_7244.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_high_20251104195852_1_7244/force/force_circle-w4_medium_high_20251104195852_1_7244.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_high_20251104195852_1_7244/analytic/analytic_xy_circle-w4_medium_high_20251104195852_1_7244.csv",
+    "started_at": "2025-11-04T19:58:52.239452",
+    "finished_at": "2025-11-04T20:01:51.233341",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.887,
+        2.887,
+        2.887
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_medium_low",
+    "status": "skipped",
+    "samples": 12065,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_low_20251104200151_1_6508/pinn/pinn_dataset_circle-w4_medium_low_20251104200151_1_6508.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_low_20251104200151_1_6508/force/force_circle-w4_medium_low_20251104200151_1_6508.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_low_20251104200151_1_6508/analytic/analytic_xy_circle-w4_medium_low_20251104200151_1_6508.csv",
+    "started_at": "2025-11-04T20:01:51.361986",
+    "finished_at": "2025-11-04T20:04:48.672892",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.887,
+        2.887,
+        2.887
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_medium_medium",
+    "status": "skipped",
+    "samples": 12064,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_medium_20251104200448_1_8796/pinn/pinn_dataset_circle-w4_medium_medium_20251104200448_1_8796.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_medium_20251104200448_1_8796/force/force_circle-w4_medium_medium_20251104200448_1_8796.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_medium_medium_20251104200448_1_8796/analytic/analytic_xy_circle-w4_medium_medium_20251104200448_1_8796.csv",
+    "started_at": "2025-11-04T20:04:48.806964",
+    "finished_at": "2025-11-04T20:07:47.091034",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.887,
+        2.887,
+        2.887
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_strong_high",
+    "status": "skipped",
+    "samples": 12081,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_high_20251104200747_1_1421/pinn/pinn_dataset_circle-w4_strong_high_20251104200747_1_1421.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_high_20251104200747_1_1421/force/force_circle-w4_strong_high_20251104200747_1_1421.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_high_20251104200747_1_1421/analytic/analytic_xy_circle-w4_strong_high_20251104200747_1_1421.csv",
+    "started_at": "2025-11-04T20:07:47.220852",
+    "finished_at": "2025-11-04T20:10:45.005527",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.196,
+        5.196,
+        5.196
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_strong_low",
+    "status": "skipped",
+    "samples": 12053,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_low_20251104201045_1_7420/pinn/pinn_dataset_circle-w4_strong_low_20251104201045_1_7420.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_low_20251104201045_1_7420/force/force_circle-w4_strong_low_20251104201045_1_7420.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_low_20251104201045_1_7420/analytic/analytic_xy_circle-w4_strong_low_20251104201045_1_7420.csv",
+    "started_at": "2025-11-04T20:10:45.125952",
+    "finished_at": "2025-11-04T20:13:44.005394",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.196,
+        5.196,
+        5.196
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_strong_medium",
+    "status": "skipped",
+    "samples": 12080,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_medium_20251104201344_1_5103/pinn/pinn_dataset_circle-w4_strong_medium_20251104201344_1_5103.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_medium_20251104201344_1_5103/force/force_circle-w4_strong_medium_20251104201344_1_5103.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_strong_medium_20251104201344_1_5103/analytic/analytic_xy_circle-w4_strong_medium_20251104201344_1_5103.csv",
+    "started_at": "2025-11-04T20:13:44.127827",
+    "finished_at": "2025-11-04T20:16:41.970941",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.196,
+        5.196,
+        5.196
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_weak_high",
+    "status": "skipped",
+    "samples": 12090,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_high_20251104201642_1_2596/pinn/pinn_dataset_circle-w4_weak_high_20251104201642_1_2596.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_high_20251104201642_1_2596/force/force_circle-w4_weak_high_20251104201642_1_2596.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_high_20251104201642_1_2596/analytic/analytic_xy_circle-w4_weak_high_20251104201642_1_2596.csv",
+    "started_at": "2025-11-04T20:16:42.089794",
+    "finished_at": "2025-11-04T20:19:35.855479",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        1.155,
+        1.155,
+        1.155
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_weak_low",
+    "status": "skipped",
+    "samples": 12051,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_low_20251104201935_1_7355/pinn/pinn_dataset_circle-w4_weak_low_20251104201935_1_7355.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_low_20251104201935_1_7355/force/force_circle-w4_weak_low_20251104201935_1_7355.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_low_20251104201935_1_7355/analytic/analytic_xy_circle-w4_weak_low_20251104201935_1_7355.csv",
+    "started_at": "2025-11-04T20:19:35.980402",
+    "finished_at": "2025-11-04T20:22:33.805098",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        1.155,
+        1.155,
+        1.155
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w4_weak_medium",
+    "status": "skipped",
+    "samples": 12057,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_medium_20251104202233_1_9783/pinn/pinn_dataset_circle-w4_weak_medium_20251104202233_1_9783.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_medium_20251104202233_1_9783/force/force_circle-w4_weak_medium_20251104202233_1_9783.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w4_weak_medium_20251104202233_1_9783/analytic/analytic_xy_circle-w4_weak_medium_20251104202233_1_9783.csv",
+    "started_at": "2025-11-04T20:22:33.947998",
+    "finished_at": "2025-11-04T20:25:32.882702",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        1.155,
+        1.155,
+        1.155
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_medium_high",
+    "status": "skipped",
+    "samples": 12082,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_high_20251104202533_1_8886/pinn/pinn_dataset_circle-w5_medium_high_20251104202533_1_8886.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_high_20251104202533_1_8886/force/force_circle-w5_medium_high_20251104202533_1_8886.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_high_20251104202533_1_8886/analytic/analytic_xy_circle-w5_medium_high_20251104202533_1_8886.csv",
+    "started_at": "2025-11-04T20:25:33.034877",
+    "finished_at": "2025-11-04T20:28:29.928632",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.0,
+        5.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_medium_low",
+    "status": "skipped",
+    "samples": 12053,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_low_20251104202830_1_9467/pinn/pinn_dataset_circle-w5_medium_low_20251104202830_1_9467.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_low_20251104202830_1_9467/force/force_circle-w5_medium_low_20251104202830_1_9467.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_low_20251104202830_1_9467/analytic/analytic_xy_circle-w5_medium_low_20251104202830_1_9467.csv",
+    "started_at": "2025-11-04T20:28:30.051306",
+    "finished_at": "2025-11-04T20:31:27.794035",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.0,
+        5.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_medium_medium",
+    "status": "skipped",
+    "samples": 12079,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_medium_20251104203127_1_7177/pinn/pinn_dataset_circle-w5_medium_medium_20251104203127_1_7177.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_medium_20251104203127_1_7177/force/force_circle-w5_medium_medium_20251104203127_1_7177.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_medium_medium_20251104203127_1_7177/analytic/analytic_xy_circle-w5_medium_medium_20251104203127_1_7177.csv",
+    "started_at": "2025-11-04T20:31:27.929663",
+    "finished_at": "2025-11-04T20:34:26.692164",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.0,
+        5.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_strong_high",
+    "status": "skipped",
+    "samples": 12083,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_high_20251104203426_1_3824/pinn/pinn_dataset_circle-w5_strong_high_20251104203426_1_3824.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_high_20251104203426_1_3824/force/force_circle-w5_strong_high_20251104203426_1_3824.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_high_20251104203426_1_3824/analytic/analytic_xy_circle-w5_strong_high_20251104203426_1_3824.csv",
+    "started_at": "2025-11-04T20:34:26.828109",
+    "finished_at": "2025-11-04T20:37:25.558010",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        9.0,
+        9.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_strong_low",
+    "status": "skipped",
+    "samples": 12078,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_low_20251104203725_1_1453/pinn/pinn_dataset_circle-w5_strong_low_20251104203725_1_1453.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_low_20251104203725_1_1453/force/force_circle-w5_strong_low_20251104203725_1_1453.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_low_20251104203725_1_1453/analytic/analytic_xy_circle-w5_strong_low_20251104203725_1_1453.csv",
+    "started_at": "2025-11-04T20:37:25.676872",
+    "finished_at": "2025-11-04T20:40:18.360377",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        9.0,
+        9.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_strong_medium",
+    "status": "skipped",
+    "samples": 12074,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_medium_20251104204018_1_7656/pinn/pinn_dataset_circle-w5_strong_medium_20251104204018_1_7656.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_medium_20251104204018_1_7656/force/force_circle-w5_strong_medium_20251104204018_1_7656.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_strong_medium_20251104204018_1_7656/analytic/analytic_xy_circle-w5_strong_medium_20251104204018_1_7656.csv",
+    "started_at": "2025-11-04T20:40:18.490248",
+    "finished_at": "2025-11-04T20:43:16.398350",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        9.0,
+        9.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_weak_high",
+    "status": "skipped",
+    "samples": 12075,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_weak_high_20251104204316_1_8905/pinn/pinn_dataset_circle-w5_weak_high_20251104204316_1_8905.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_weak_high_20251104204316_1_8905/force/force_circle-w5_weak_high_20251104204316_1_8905.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_weak_high_20251104204316_1_8905/analytic/analytic_xy_circle-w5_weak_high_20251104204316_1_8905.csv",
+    "started_at": "2025-11-04T20:43:16.529664",
+    "finished_at": "2025-11-04T20:46:15.371970",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.0,
+        2.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_weak_low",
+    "status": "skipped",
+    "samples": 3724,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_weak_low_20251104204615_1_1079/pinn/pinn_dataset_circle-w5_weak_low_20251104204615_1_1079.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_weak_low_20251104204615_1_1079/force/force_circle-w5_weak_low_20251104204615_1_1079.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-04T20:46:15.499592",
+    "finished_at": "2025-11-04T20:49:29.199461",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.0,
+        2.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w5_weak_medium",
+    "status": "skipped",
+    "samples": 3716,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_weak_medium_20251104204929_1_9019/pinn/pinn_dataset_circle-w5_weak_medium_20251104204929_1_9019.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w5_weak_medium_20251104204929_1_9019/force/force_circle-w5_weak_medium_20251104204929_1_9019.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-04T20:49:29.241534",
+    "finished_at": "2025-11-04T20:52:43.104663",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.0,
+        2.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_medium_high",
+    "status": "skipped",
+    "samples": 12052,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_high_20251104205243_1_6754/pinn/pinn_dataset_circle-w6_medium_high_20251104205243_1_6754.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_high_20251104205243_1_6754/force/force_circle-w6_medium_high_20251104205243_1_6754.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_high_20251104205243_1_6754/analytic/analytic_xy_circle-w6_medium_high_20251104205243_1_6754.csv",
+    "started_at": "2025-11-04T20:52:43.141568",
+    "finished_at": "2025-11-04T20:55:38.880646",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.887,
+        -2.887,
+        -2.887
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_medium_low",
+    "status": "skipped",
+    "samples": 12067,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_low_20251104205539_1_5746/pinn/pinn_dataset_circle-w6_medium_low_20251104205539_1_5746.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_low_20251104205539_1_5746/force/force_circle-w6_medium_low_20251104205539_1_5746.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_low_20251104205539_1_5746/analytic/analytic_xy_circle-w6_medium_low_20251104205539_1_5746.csv",
+    "started_at": "2025-11-04T20:55:39.018322",
+    "finished_at": "2025-11-04T20:58:38.036837",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.887,
+        -2.887,
+        -2.887
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_medium_medium",
+    "status": "skipped",
+    "samples": 3776,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_medium_20251104210157_2_4249/pinn/pinn_dataset_circle-w6_medium_medium_20251104210157_2_4249.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_medium_medium_20251104210157_2_4249/force/force_circle-w6_medium_medium_20251104210157_2_4249.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-04T21:01:57.063937",
+    "finished_at": "2025-11-04T21:05:10.997330",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.887,
+        -2.887,
+        -2.887
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_strong_high",
+    "status": "skipped",
+    "samples": 2558,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_strong_high_20251104210511_1_7876/pinn/pinn_dataset_circle-w6_strong_high_20251104210511_1_7876.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_strong_high_20251104210511_1_7876/force/force_circle-w6_strong_high_20251104210511_1_7876.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-04T21:05:11.051004",
+    "finished_at": "2025-11-04T21:08:24.975177",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.196,
+        -5.196,
+        -5.196
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_strong_low",
+    "status": "skipped",
+    "samples": 11996,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_strong_low_20251104211144_2_7292/pinn/pinn_dataset_circle-w6_strong_low_20251104211144_2_7292.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_strong_low_20251104211144_2_7292/force/force_circle-w6_strong_low_20251104211144_2_7292.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_strong_low_20251104211144_2_7292/analytic/analytic_xy_circle-w6_strong_low_20251104211144_2_7292.csv",
+    "started_at": "2025-11-04T21:11:44.164681",
+    "finished_at": "2025-11-04T21:14:32.258260",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "completion topic signaled run end",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.196,
+        -5.196,
+        -5.196
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_strong_medium",
+    "status": "skipped",
+    "samples": 1041,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_strong_medium_20251104211432_1_1592/pinn/pinn_dataset_circle-w6_strong_medium_20251104211432_1_1592.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_strong_medium_20251104211432_1_1592/force/force_circle-w6_strong_medium_20251104211432_1_1592.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-04T21:14:32.434030",
+    "finished_at": "2025-11-04T21:17:46.517201",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.196,
+        -5.196,
+        -5.196
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_weak_high",
+    "status": "skipped",
+    "samples": 11691,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_high_20251104211746_1_7471/pinn/pinn_dataset_circle-w6_weak_high_20251104211746_1_7471.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_high_20251104211746_1_7471/force/force_circle-w6_weak_high_20251104211746_1_7471.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_high_20251104211746_1_7471/analytic/analytic_xy_circle-w6_weak_high_20251104211746_1_7471.csv",
+    "started_at": "2025-11-04T21:17:46.535889",
+    "finished_at": "2025-11-04T21:20:46.372898",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        1.155,
+        -1.155,
+        -1.155
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_weak_low",
+    "status": "skipped",
+    "samples": 11567,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_low_20251104212046_1_8814/pinn/pinn_dataset_circle-w6_weak_low_20251104212046_1_8814.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_low_20251104212046_1_8814/force/force_circle-w6_weak_low_20251104212046_1_8814.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_low_20251104212046_1_8814/analytic/analytic_xy_circle-w6_weak_low_20251104212046_1_8814.csv",
+    "started_at": "2025-11-04T21:20:46.535606",
+    "finished_at": "2025-11-04T21:23:46.312309",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        1.155,
+        -1.155,
+        -1.155
+      ]
+    }
+  },
+  {
+    "scenario": "circle.w6_weak_medium",
+    "status": "skipped",
+    "samples": 11888,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_medium_20251104212346_1_7801/pinn/pinn_dataset_circle-w6_weak_medium_20251104212346_1_7801.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_medium_20251104212346_1_7801/force/force_circle-w6_weak_medium_20251104212346_1_7801.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-w6_weak_medium_20251104212346_1_7801/analytic/analytic_xy_circle-w6_weak_medium_20251104212346_1_7801.csv",
+    "started_at": "2025-11-04T21:23:46.460105",
+    "finished_at": "2025-11-04T21:26:41.263684",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        1.155,
+        -1.155,
+        -1.155
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.c1_low",
+    "status": "skipped",
+    "samples": 9518,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c1_low_20251104212641_1_7044/pinn/pinn_dataset_figure_eight-c1_low_20251104212641_1_7044.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c1_low_20251104212641_1_7044/force/force_figure_eight-c1_low_20251104212641_1_7044.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-04T21:26:41.440088",
+    "finished_at": "2025-11-04T21:31:19.361357",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.c2_medium",
+    "status": "skipped",
+    "samples": 19606,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c2_medium_20251104213119_1_6731/pinn/pinn_dataset_figure_eight-c2_medium_20251104213119_1_6731.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c2_medium_20251104213119_1_6731/force/force_figure_eight-c2_medium_20251104213119_1_6731.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c2_medium_20251104213119_1_6731/analytic/analytic_xy_figure_eight-c2_medium_20251104213119_1_6731.csv",
+    "started_at": "2025-11-04T21:31:19.506732",
+    "finished_at": "2025-11-04T21:35:40.370196",
+    "attempts": 0,
+    "notes": [
+      "Port 11374 busy, retrying",
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.c3_high",
+    "status": "skipped",
+    "samples": 19425,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c3_high_20251104213540_1_5714/pinn/pinn_dataset_figure_eight-c3_high_20251104213540_1_5714.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c3_high_20251104213540_1_5714/force/force_figure_eight-c3_high_20251104213540_1_5714.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-c3_high_20251104213540_1_5714/analytic/analytic_xy_figure_eight-c3_high_20251104213540_1_5714.csv",
+    "started_at": "2025-11-04T21:35:40.668969",
+    "finished_at": "2025-11-04T21:40:00.654151",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "dryden",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_medium_high",
+    "status": "skipped",
+    "samples": 19755,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_high_20251104214000_1_2560/pinn/pinn_dataset_figure_eight-w1_medium_high_20251104214000_1_2560.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_high_20251104214000_1_2560/force/force_figure_eight-w1_medium_high_20251104214000_1_2560.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_high_20251104214000_1_2560/analytic/analytic_xy_figure_eight-w1_medium_high_20251104214000_1_2560.csv",
+    "started_at": "2025-11-04T21:40:00.978778",
+    "finished_at": "2025-11-04T21:44:19.722218",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_medium_low",
+    "status": "skipped",
+    "samples": 19581,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_low_20251104214420_1_6247/pinn/pinn_dataset_figure_eight-w1_medium_low_20251104214420_1_6247.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_low_20251104214420_1_6247/force/force_figure_eight-w1_medium_low_20251104214420_1_6247.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_low_20251104214420_1_6247/analytic/analytic_xy_figure_eight-w1_medium_low_20251104214420_1_6247.csv",
+    "started_at": "2025-11-04T21:44:20.046834",
+    "finished_at": "2025-11-04T21:48:38.358945",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_medium_medium",
+    "status": "skipped",
+    "samples": 19866,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_medium_20251104214838_1_7963/pinn/pinn_dataset_figure_eight-w1_medium_medium_20251104214838_1_7963.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_medium_20251104214838_1_7963/force/force_figure_eight-w1_medium_medium_20251104214838_1_7963.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_medium_medium_20251104214838_1_7963/analytic/analytic_xy_figure_eight-w1_medium_medium_20251104214838_1_7963.csv",
+    "started_at": "2025-11-04T21:48:38.663992",
+    "finished_at": "2025-11-04T21:52:58.218527",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_strong_high",
+    "status": "skipped",
+    "samples": 19420,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_high_20251104215741_2_4328/pinn/pinn_dataset_figure_eight-w1_strong_high_20251104215741_2_4328.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_high_20251104215741_2_4328/force/force_figure_eight-w1_strong_high_20251104215741_2_4328.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_high_20251104215741_2_4328/analytic/analytic_xy_figure_eight-w1_strong_high_20251104215741_2_4328.csv",
+    "started_at": "2025-11-04T21:57:41.950419",
+    "finished_at": "2025-11-04T22:02:00.361438",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        9.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_strong_low",
+    "status": "skipped",
+    "samples": 19363,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_low_20251104220200_1_1088/pinn/pinn_dataset_figure_eight-w1_strong_low_20251104220200_1_1088.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_low_20251104220200_1_1088/force/force_figure_eight-w1_strong_low_20251104220200_1_1088.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_low_20251104220200_1_1088/analytic/analytic_xy_figure_eight-w1_strong_low_20251104220200_1_1088.csv",
+    "started_at": "2025-11-04T22:02:00.660036",
+    "finished_at": "2025-11-04T22:06:20.184916",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        9.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_strong_medium",
+    "status": "skipped",
+    "samples": 18913,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_medium_20251104220620_1_7591/pinn/pinn_dataset_figure_eight-w1_strong_medium_20251104220620_1_7591.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_medium_20251104220620_1_7591/force/force_figure_eight-w1_strong_medium_20251104220620_1_7591.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_strong_medium_20251104220620_1_7591/analytic/analytic_xy_figure_eight-w1_strong_medium_20251104220620_1_7591.csv",
+    "started_at": "2025-11-04T22:06:20.505432",
+    "finished_at": "2025-11-04T22:10:39.541049",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        9.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_weak_high",
+    "status": "skipped",
+    "samples": 19268,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_high_20251104221039_1_6164/pinn/pinn_dataset_figure_eight-w1_weak_high_20251104221039_1_6164.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_high_20251104221039_1_6164/force/force_figure_eight-w1_weak_high_20251104221039_1_6164.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_high_20251104221039_1_6164/analytic/analytic_xy_figure_eight-w1_weak_high_20251104221039_1_6164.csv",
+    "started_at": "2025-11-04T22:10:39.845709",
+    "finished_at": "2025-11-04T22:14:58.842567",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_weak_low",
+    "status": "skipped",
+    "samples": 19510,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_low_20251104221459_1_2244/pinn/pinn_dataset_figure_eight-w1_weak_low_20251104221459_1_2244.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_low_20251104221459_1_2244/force/force_figure_eight-w1_weak_low_20251104221459_1_2244.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_low_20251104221459_1_2244/analytic/analytic_xy_figure_eight-w1_weak_low_20251104221459_1_2244.csv",
+    "started_at": "2025-11-04T22:14:59.160479",
+    "finished_at": "2025-11-04T22:19:17.312376",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w1_weak_medium",
+    "status": "skipped",
+    "samples": 20080,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_medium_20251104221917_1_2023/pinn/pinn_dataset_figure_eight-w1_weak_medium_20251104221917_1_2023.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_medium_20251104221917_1_2023/force/force_figure_eight-w1_weak_medium_20251104221917_1_2023.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w1_weak_medium_20251104221917_1_2023/analytic/analytic_xy_figure_eight-w1_weak_medium_20251104221917_1_2023.csv",
+    "started_at": "2025-11-04T22:19:17.633716",
+    "finished_at": "2025-11-04T22:23:36.089358",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_x",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_medium_high",
+    "status": "skipped",
+    "samples": 20229,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_high_20251104222336_1_7387/pinn/pinn_dataset_figure_eight-w2_medium_high_20251104222336_1_7387.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_high_20251104222336_1_7387/force/force_figure_eight-w2_medium_high_20251104222336_1_7387.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_high_20251104222336_1_7387/analytic/analytic_xy_figure_eight-w2_medium_high_20251104222336_1_7387.csv",
+    "started_at": "2025-11-04T22:23:36.406760",
+    "finished_at": "2025-11-04T22:27:55.935588",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        5.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_medium_low",
+    "status": "skipped",
+    "samples": 18404,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_low_20251104222756_1_8590/pinn/pinn_dataset_figure_eight-w2_medium_low_20251104222756_1_8590.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_low_20251104222756_1_8590/force/force_figure_eight-w2_medium_low_20251104222756_1_8590.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_low_20251104222756_1_8590/analytic/analytic_xy_figure_eight-w2_medium_low_20251104222756_1_8590.csv",
+    "started_at": "2025-11-04T22:27:56.278347",
+    "finished_at": "2025-11-04T22:32:15.893150",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        5.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_medium_medium",
+    "status": "skipped",
+    "samples": 20226,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_medium_20251104223216_1_9222/pinn/pinn_dataset_figure_eight-w2_medium_medium_20251104223216_1_9222.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_medium_20251104223216_1_9222/force/force_figure_eight-w2_medium_medium_20251104223216_1_9222.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_medium_medium_20251104223216_1_9222/analytic/analytic_xy_figure_eight-w2_medium_medium_20251104223216_1_9222.csv",
+    "started_at": "2025-11-04T22:32:16.187858",
+    "finished_at": "2025-11-04T22:36:34.650066",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        5.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_strong_high",
+    "status": "skipped",
+    "samples": 19869,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_high_20251104223634_1_6626/pinn/pinn_dataset_figure_eight-w2_strong_high_20251104223634_1_6626.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_high_20251104223634_1_6626/force/force_figure_eight-w2_strong_high_20251104223634_1_6626.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_high_20251104223634_1_6626/analytic/analytic_xy_figure_eight-w2_strong_high_20251104223634_1_6626.csv",
+    "started_at": "2025-11-04T22:36:34.980261",
+    "finished_at": "2025-11-04T22:40:53.154605",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_strong_low",
+    "status": "skipped",
+    "samples": 19485,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_low_20251104224053_1_1475/pinn/pinn_dataset_figure_eight-w2_strong_low_20251104224053_1_1475.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_low_20251104224053_1_1475/force/force_figure_eight-w2_strong_low_20251104224053_1_1475.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_low_20251104224053_1_1475/analytic/analytic_xy_figure_eight-w2_strong_low_20251104224053_1_1475.csv",
+    "started_at": "2025-11-04T22:40:53.480047",
+    "finished_at": "2025-11-04T22:45:11.536267",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_strong_medium",
+    "status": "skipped",
+    "samples": 19699,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_medium_20251104224511_1_9296/pinn/pinn_dataset_figure_eight-w2_strong_medium_20251104224511_1_9296.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_medium_20251104224511_1_9296/force/force_figure_eight-w2_strong_medium_20251104224511_1_9296.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_strong_medium_20251104224511_1_9296/analytic/analytic_xy_figure_eight-w2_strong_medium_20251104224511_1_9296.csv",
+    "started_at": "2025-11-04T22:45:11.851777",
+    "finished_at": "2025-11-04T22:49:30.011570",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        9.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_weak_high",
+    "status": "skipped",
+    "samples": 19435,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_high_20251104224930_1_5501/pinn/pinn_dataset_figure_eight-w2_weak_high_20251104224930_1_5501.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_high_20251104224930_1_5501/force/force_figure_eight-w2_weak_high_20251104224930_1_5501.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_high_20251104224930_1_5501/analytic/analytic_xy_figure_eight-w2_weak_high_20251104224930_1_5501.csv",
+    "started_at": "2025-11-04T22:49:30.332212",
+    "finished_at": "2025-11-04T22:53:49.216816",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        2.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_weak_low",
+    "status": "skipped",
+    "samples": 19143,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_low_20251104225349_1_7947/pinn/pinn_dataset_figure_eight-w2_weak_low_20251104225349_1_7947.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_low_20251104225349_1_7947/force/force_figure_eight-w2_weak_low_20251104225349_1_7947.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_low_20251104225349_1_7947/analytic/analytic_xy_figure_eight-w2_weak_low_20251104225349_1_7947.csv",
+    "started_at": "2025-11-04T22:53:49.526161",
+    "finished_at": "2025-11-04T22:58:07.536426",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        2.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w2_weak_medium",
+    "status": "skipped",
+    "samples": 20032,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_medium_20251104225808_1_8797/pinn/pinn_dataset_figure_eight-w2_weak_medium_20251104225808_1_8797.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_medium_20251104225808_1_8797/force/force_figure_eight-w2_weak_medium_20251104225808_1_8797.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w2_weak_medium_20251104225808_1_8797/analytic/analytic_xy_figure_eight-w2_weak_medium_20251104225808_1_8797.csv",
+    "started_at": "2025-11-04T22:58:08.028859",
+    "finished_at": "2025-11-04T23:02:26.061603",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "vertical",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        0.0,
+        0.0,
+        2.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_medium_high",
+    "status": "skipped",
+    "samples": 19717,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_high_20251104230226_1_8960/pinn/pinn_dataset_figure_eight-w3_medium_high_20251104230226_1_8960.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_high_20251104230226_1_8960/force/force_figure_eight-w3_medium_high_20251104230226_1_8960.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_high_20251104230226_1_8960/analytic/analytic_xy_figure_eight-w3_medium_high_20251104230226_1_8960.csv",
+    "started_at": "2025-11-04T23:02:26.377942",
+    "finished_at": "2025-11-04T23:06:44.344314",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        3.536,
+        3.536,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_medium_low",
+    "status": "skipped",
+    "samples": 19014,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_low_20251104230644_1_4029/pinn/pinn_dataset_figure_eight-w3_medium_low_20251104230644_1_4029.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_low_20251104230644_1_4029/force/force_figure_eight-w3_medium_low_20251104230644_1_4029.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_low_20251104230644_1_4029/analytic/analytic_xy_figure_eight-w3_medium_low_20251104230644_1_4029.csv",
+    "started_at": "2025-11-04T23:06:44.679479",
+    "finished_at": "2025-11-04T23:11:01.757667",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        3.536,
+        3.536,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_medium_medium",
+    "status": "skipped",
+    "samples": 18949,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_medium_20251104231102_1_2460/pinn/pinn_dataset_figure_eight-w3_medium_medium_20251104231102_1_2460.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_medium_20251104231102_1_2460/force/force_figure_eight-w3_medium_medium_20251104231102_1_2460.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_medium_medium_20251104231102_1_2460/analytic/analytic_xy_figure_eight-w3_medium_medium_20251104231102_1_2460.csv",
+    "started_at": "2025-11-04T23:11:02.080980",
+    "finished_at": "2025-11-04T23:15:19.775647",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        3.536,
+        3.536,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_strong_high",
+    "status": "skipped",
+    "samples": 19175,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_high_20251104231520_1_1866/pinn/pinn_dataset_figure_eight-w3_strong_high_20251104231520_1_1866.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_high_20251104231520_1_1866/force/force_figure_eight-w3_strong_high_20251104231520_1_1866.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_high_20251104231520_1_1866/analytic/analytic_xy_figure_eight-w3_strong_high_20251104231520_1_1866.csv",
+    "started_at": "2025-11-04T23:15:20.100095",
+    "finished_at": "2025-11-04T23:19:38.376914",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        6.364,
+        6.364,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_strong_low",
+    "status": "skipped",
+    "samples": 18654,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_low_20251104231938_1_4798/pinn/pinn_dataset_figure_eight-w3_strong_low_20251104231938_1_4798.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_low_20251104231938_1_4798/force/force_figure_eight-w3_strong_low_20251104231938_1_4798.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_low_20251104231938_1_4798/analytic/analytic_xy_figure_eight-w3_strong_low_20251104231938_1_4798.csv",
+    "started_at": "2025-11-04T23:19:38.694226",
+    "finished_at": "2025-11-04T23:23:57.845808",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        6.364,
+        6.364,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_strong_medium",
+    "status": "skipped",
+    "samples": 19806,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_medium_20251104232358_1_8978/pinn/pinn_dataset_figure_eight-w3_strong_medium_20251104232358_1_8978.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_medium_20251104232358_1_8978/force/force_figure_eight-w3_strong_medium_20251104232358_1_8978.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_strong_medium_20251104232358_1_8978/analytic/analytic_xy_figure_eight-w3_strong_medium_20251104232358_1_8978.csv",
+    "started_at": "2025-11-04T23:23:58.148161",
+    "finished_at": "2025-11-04T23:28:16.342792",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        6.364,
+        6.364,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_weak_high",
+    "status": "skipped",
+    "samples": 19740,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_high_20251104232816_1_5634/pinn/pinn_dataset_figure_eight-w3_weak_high_20251104232816_1_5634.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_high_20251104232816_1_5634/force/force_figure_eight-w3_weak_high_20251104232816_1_5634.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_high_20251104232816_1_5634/analytic/analytic_xy_figure_eight-w3_weak_high_20251104232816_1_5634.csv",
+    "started_at": "2025-11-04T23:28:16.640421",
+    "finished_at": "2025-11-04T23:32:36.291007",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        1.414,
+        1.414,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_weak_low",
+    "status": "skipped",
+    "samples": 3641,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_low_20251104233236_1_2734/pinn/pinn_dataset_figure_eight-w3_weak_low_20251104233236_1_2734.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_low_20251104233236_1_2734/force/force_figure_eight-w3_weak_low_20251104233236_1_2734.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-04T23:32:36.631860",
+    "finished_at": "2025-11-04T23:37:15.142589",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        1.414,
+        1.414,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w3_weak_medium",
+    "status": "skipped",
+    "samples": 20033,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_medium_20251104233715_1_7656/pinn/pinn_dataset_figure_eight-w3_weak_medium_20251104233715_1_7656.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_medium_20251104233715_1_7656/force/force_figure_eight-w3_weak_medium_20251104233715_1_7656.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w3_weak_medium_20251104233715_1_7656/analytic/analytic_xy_figure_eight-w3_weak_medium_20251104233715_1_7656.csv",
+    "started_at": "2025-11-04T23:37:15.207016",
+    "finished_at": "2025-11-04T23:41:33.303615",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "horizontal_diagonal",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        1.414,
+        1.414,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_medium_high",
+    "status": "skipped",
+    "samples": 19891,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_high_20251104234133_1_7436/pinn/pinn_dataset_figure_eight-w4_medium_high_20251104234133_1_7436.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_high_20251104234133_1_7436/force/force_figure_eight-w4_medium_high_20251104234133_1_7436.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_high_20251104234133_1_7436/analytic/analytic_xy_figure_eight-w4_medium_high_20251104234133_1_7436.csv",
+    "started_at": "2025-11-04T23:41:33.631149",
+    "finished_at": "2025-11-04T23:45:51.135005",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.887,
+        2.887,
+        2.887
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_medium_low",
+    "status": "skipped",
+    "samples": 19833,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_low_20251104234551_1_2205/pinn/pinn_dataset_figure_eight-w4_medium_low_20251104234551_1_2205.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_low_20251104234551_1_2205/force/force_figure_eight-w4_medium_low_20251104234551_1_2205.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_low_20251104234551_1_2205/analytic/analytic_xy_figure_eight-w4_medium_low_20251104234551_1_2205.csv",
+    "started_at": "2025-11-04T23:45:51.487429",
+    "finished_at": "2025-11-04T23:50:08.862512",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.887,
+        2.887,
+        2.887
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_medium_medium",
+    "status": "skipped",
+    "samples": 19329,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_medium_20251104235009_1_5174/pinn/pinn_dataset_figure_eight-w4_medium_medium_20251104235009_1_5174.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_medium_20251104235009_1_5174/force/force_figure_eight-w4_medium_medium_20251104235009_1_5174.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_medium_medium_20251104235009_1_5174/analytic/analytic_xy_figure_eight-w4_medium_medium_20251104235009_1_5174.csv",
+    "started_at": "2025-11-04T23:50:09.204086",
+    "finished_at": "2025-11-04T23:54:26.421580",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.887,
+        2.887,
+        2.887
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_strong_high",
+    "status": "skipped",
+    "samples": 19804,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_high_20251104235426_1_8507/pinn/pinn_dataset_figure_eight-w4_strong_high_20251104235426_1_8507.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_high_20251104235426_1_8507/force/force_figure_eight-w4_strong_high_20251104235426_1_8507.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_high_20251104235426_1_8507/analytic/analytic_xy_figure_eight-w4_strong_high_20251104235426_1_8507.csv",
+    "started_at": "2025-11-04T23:54:26.777445",
+    "finished_at": "2025-11-04T23:58:43.339798",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.196,
+        5.196,
+        5.196
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_strong_low",
+    "status": "skipped",
+    "samples": 19664,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_low_20251104235843_1_6349/pinn/pinn_dataset_figure_eight-w4_strong_low_20251104235843_1_6349.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_low_20251104235843_1_6349/force/force_figure_eight-w4_strong_low_20251104235843_1_6349.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_low_20251104235843_1_6349/analytic/analytic_xy_figure_eight-w4_strong_low_20251104235843_1_6349.csv",
+    "started_at": "2025-11-04T23:58:43.661271",
+    "finished_at": "2025-11-05T00:02:55.331817",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.196,
+        5.196,
+        5.196
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_strong_medium",
+    "status": "skipped",
+    "samples": 20333,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_medium_20251105000255_1_3130/pinn/pinn_dataset_figure_eight-w4_strong_medium_20251105000255_1_3130.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_medium_20251105000255_1_3130/force/force_figure_eight-w4_strong_medium_20251105000255_1_3130.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_strong_medium_20251105000255_1_3130/analytic/analytic_xy_figure_eight-w4_strong_medium_20251105000255_1_3130.csv",
+    "started_at": "2025-11-05T00:02:55.673497",
+    "finished_at": "2025-11-05T00:07:19.791187",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.196,
+        5.196,
+        5.196
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_weak_high",
+    "status": "skipped",
+    "samples": 20415,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_high_20251105000720_1_1855/pinn/pinn_dataset_figure_eight-w4_weak_high_20251105000720_1_1855.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_high_20251105000720_1_1855/force/force_figure_eight-w4_weak_high_20251105000720_1_1855.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_high_20251105000720_1_1855/analytic/analytic_xy_figure_eight-w4_weak_high_20251105000720_1_1855.csv",
+    "started_at": "2025-11-05T00:07:20.099397",
+    "finished_at": "2025-11-05T00:11:44.554288",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        1.155,
+        1.155,
+        1.155
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_weak_low",
+    "status": "skipped",
+    "samples": 20165,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_low_20251105001144_1_1816/pinn/pinn_dataset_figure_eight-w4_weak_low_20251105001144_1_1816.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_low_20251105001144_1_1816/force/force_figure_eight-w4_weak_low_20251105001144_1_1816.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_low_20251105001144_1_1816/analytic/analytic_xy_figure_eight-w4_weak_low_20251105001144_1_1816.csv",
+    "started_at": "2025-11-05T00:11:44.880855",
+    "finished_at": "2025-11-05T00:16:09.015012",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        1.155,
+        1.155,
+        1.155
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w4_weak_medium",
+    "status": "skipped",
+    "samples": 20393,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_medium_20251105001609_1_5179/pinn/pinn_dataset_figure_eight-w4_weak_medium_20251105001609_1_5179.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_medium_20251105001609_1_5179/force/force_figure_eight-w4_weak_medium_20251105001609_1_5179.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w4_weak_medium_20251105001609_1_5179/analytic/analytic_xy_figure_eight-w4_weak_medium_20251105001609_1_5179.csv",
+    "started_at": "2025-11-05T00:16:09.395320",
+    "finished_at": "2025-11-05T00:20:33.963224",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "ascending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        1.155,
+        1.155,
+        1.155
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_medium_high",
+    "status": "skipped",
+    "samples": 20386,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_high_20251105002034_1_4316/pinn/pinn_dataset_figure_eight-w5_medium_high_20251105002034_1_4316.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_high_20251105002034_1_4316/force/force_figure_eight-w5_medium_high_20251105002034_1_4316.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_high_20251105002034_1_4316/analytic/analytic_xy_figure_eight-w5_medium_high_20251105002034_1_4316.csv",
+    "started_at": "2025-11-05T00:20:34.309169",
+    "finished_at": "2025-11-05T00:24:58.786306",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.0,
+        5.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_medium_low",
+    "status": "skipped",
+    "samples": 20415,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_low_20251105002459_1_7414/pinn/pinn_dataset_figure_eight-w5_medium_low_20251105002459_1_7414.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_low_20251105002459_1_7414/force/force_figure_eight-w5_medium_low_20251105002459_1_7414.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_low_20251105002459_1_7414/analytic/analytic_xy_figure_eight-w5_medium_low_20251105002459_1_7414.csv",
+    "started_at": "2025-11-05T00:24:59.116086",
+    "finished_at": "2025-11-05T00:29:23.181441",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.0,
+        5.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_medium_medium",
+    "status": "skipped",
+    "samples": 20432,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_medium_20251105002923_1_7338/pinn/pinn_dataset_figure_eight-w5_medium_medium_20251105002923_1_7338.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_medium_20251105002923_1_7338/force/force_figure_eight-w5_medium_medium_20251105002923_1_7338.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_medium_medium_20251105002923_1_7338/analytic/analytic_xy_figure_eight-w5_medium_medium_20251105002923_1_7338.csv",
+    "started_at": "2025-11-05T00:29:23.534254",
+    "finished_at": "2025-11-05T00:33:47.478260",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.0,
+        5.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_strong_high",
+    "status": "skipped",
+    "samples": 12883,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_high_20251105003347_1_3879/pinn/pinn_dataset_figure_eight-w5_strong_high_20251105003347_1_3879.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_high_20251105003347_1_3879/force/force_figure_eight-w5_strong_high_20251105003347_1_3879.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-05T00:33:47.848407",
+    "finished_at": "2025-11-05T00:38:26.497691",
+    "attempts": 0,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        9.0,
+        9.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_strong_medium",
+    "status": "skipped",
+    "samples": 19964,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_medium_20251105004754_1_7864/pinn/pinn_dataset_figure_eight-w5_strong_medium_20251105004754_1_7864.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_medium_20251105004754_1_7864/force/force_figure_eight-w5_strong_medium_20251105004754_1_7864.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_medium_20251105004754_1_7864/analytic/analytic_xy_figure_eight-w5_strong_medium_20251105004754_1_7864.csv",
+    "started_at": "2025-11-05T00:47:54.190532",
+    "finished_at": "2025-11-05T00:52:23.663408",
+    "attempts": 0,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "Already recorded (checkpoint)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        9.0,
+        9.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_strong_low",
+    "status": "success",
+    "samples": 20483,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_low_20251105064239_1_5744/pinn/pinn_dataset_figure_eight-w5_strong_low_20251105064239_1_5744.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_low_20251105064239_1_5744/force/force_figure_eight-w5_strong_low_20251105064239_1_5744.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_strong_low_20251105064239_1_5744/analytic/analytic_xy_figure_eight-w5_strong_low_20251105064239_1_5744.csv",
+    "started_at": "2025-11-05T06:42:39.552226",
+    "finished_at": "2025-11-05T06:47:00.499971",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        9.0,
+        9.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_weak_high",
+    "status": "success",
+    "samples": 20356,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_high_20251105064700_1_2114/pinn/pinn_dataset_figure_eight-w5_weak_high_20251105064700_1_2114.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_high_20251105064700_1_2114/force/force_figure_eight-w5_weak_high_20251105064700_1_2114.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_high_20251105064700_1_2114/analytic/analytic_xy_figure_eight-w5_weak_high_20251105064700_1_2114.csv",
+    "started_at": "2025-11-05T06:47:00.734714",
+    "finished_at": "2025-11-05T06:51:16.920632",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.0,
+        2.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_weak_low",
+    "status": "success",
+    "samples": 20147,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_low_20251105065117_1_2742/pinn/pinn_dataset_figure_eight-w5_weak_low_20251105065117_1_2742.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_low_20251105065117_1_2742/force/force_figure_eight-w5_weak_low_20251105065117_1_2742.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_low_20251105065117_1_2742/analytic/analytic_xy_figure_eight-w5_weak_low_20251105065117_1_2742.csv",
+    "started_at": "2025-11-05T06:51:17.159953",
+    "finished_at": "2025-11-05T06:55:32.309938",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.0,
+        2.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w5_weak_medium",
+    "status": "success",
+    "samples": 19070,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_medium_20251105065532_1_3686/pinn/pinn_dataset_figure_eight-w5_weak_medium_20251105065532_1_3686.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_medium_20251105065532_1_3686/force/force_figure_eight-w5_weak_medium_20251105065532_1_3686.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w5_weak_medium_20251105065532_1_3686/analytic/analytic_xy_figure_eight-w5_weak_medium_20251105065532_1_3686.csv",
+    "started_at": "2025-11-05T06:55:32.563537",
+    "finished_at": "2025-11-05T06:59:48.292654",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "biaxial_xy",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.0,
+        2.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_medium_high",
+    "status": "success",
+    "samples": 19542,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_high_20251105065948_1_1087/pinn/pinn_dataset_figure_eight-w6_medium_high_20251105065948_1_1087.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_high_20251105065948_1_1087/force/force_figure_eight-w6_medium_high_20251105065948_1_1087.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_high_20251105065948_1_1087/analytic/analytic_xy_figure_eight-w6_medium_high_20251105065948_1_1087.csv",
+    "started_at": "2025-11-05T06:59:48.537833",
+    "finished_at": "2025-11-05T07:04:04.366864",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        2.887,
+        -2.887,
+        -2.887
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_medium_low",
+    "status": "success",
+    "samples": 19778,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_low_20251105070404_1_6013/pinn/pinn_dataset_figure_eight-w6_medium_low_20251105070404_1_6013.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_low_20251105070404_1_6013/force/force_figure_eight-w6_medium_low_20251105070404_1_6013.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_low_20251105070404_1_6013/analytic/analytic_xy_figure_eight-w6_medium_low_20251105070404_1_6013.csv",
+    "started_at": "2025-11-05T07:04:04.631185",
+    "finished_at": "2025-11-05T07:08:19.619129",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        2.887,
+        -2.887,
+        -2.887
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_medium_medium",
+    "status": "success",
+    "samples": 19052,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_medium_20251105070819_1_8779/pinn/pinn_dataset_figure_eight-w6_medium_medium_20251105070819_1_8779.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_medium_20251105070819_1_8779/force/force_figure_eight-w6_medium_medium_20251105070819_1_8779.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_medium_medium_20251105070819_1_8779/analytic/analytic_xy_figure_eight-w6_medium_medium_20251105070819_1_8779.csv",
+    "started_at": "2025-11-05T07:08:19.888061",
+    "finished_at": "2025-11-05T07:12:35.230975",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 5.0,
+      "speed_label": "medium",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        2.887,
+        -2.887,
+        -2.887
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_strong_high",
+    "status": "success",
+    "samples": 4463,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_strong_high_20251105071718_2_5759/pinn/pinn_dataset_figure_eight-w6_strong_high_20251105071718_2_5759.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_strong_high_20251105071718_2_5759/force/force_figure_eight-w6_strong_high_20251105071718_2_5759.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-05T07:17:18.886782",
+    "finished_at": "2025-11-05T07:21:57.373793",
+    "attempts": 2,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        5.196,
+        -5.196,
+        -5.196
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_strong_low",
+    "status": "success",
+    "samples": 10715,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_strong_low_20251105072157_1_6596/pinn/pinn_dataset_figure_eight-w6_strong_low_20251105072157_1_6596.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_strong_low_20251105072157_1_6596/force/force_figure_eight-w6_strong_low_20251105072157_1_6596.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_strong_low_20251105072157_1_6596/analytic/analytic_xy_figure_eight-w6_strong_low_20251105072157_1_6596.csv",
+    "started_at": "2025-11-05T07:21:57.459466",
+    "finished_at": "2025-11-05T07:26:09.703857",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "completion topic signaled run end"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        5.196,
+        -5.196,
+        -5.196
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_strong_medium",
+    "status": "success",
+    "samples": 19325,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_strong_medium_20251105072609_1_4560/pinn/pinn_dataset_figure_eight-w6_strong_medium_20251105072609_1_4560.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_strong_medium_20251105072609_1_4560/force/force_figure_eight-w6_strong_medium_20251105072609_1_4560.csv",
+    "analytic_csv": null,
+    "started_at": "2025-11-05T07:26:09.857023",
+    "finished_at": "2025-11-05T07:30:47.841482",
+    "attempts": 1,
+    "notes": [
+      "roslaunch reached timeout; terminating and proceeding to finalize",
+      "recorder grace window reached; finalizing",
+      "Missing analytic CSV (optional)"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 9.0,
+      "speed_label": "strong",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        5.196,
+        -5.196,
+        -5.196
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_weak_high",
+    "status": "success",
+    "samples": 18432,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_high_20251105073048_1_9263/pinn/pinn_dataset_figure_eight-w6_weak_high_20251105073048_1_9263.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_high_20251105073048_1_9263/force/force_figure_eight-w6_weak_high_20251105073048_1_9263.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_high_20251105073048_1_9263/analytic/analytic_xy_figure_eight-w6_weak_high_20251105073048_1_9263.csv",
+    "started_at": "2025-11-05T07:30:48.127838",
+    "finished_at": "2025-11-05T07:35:00.531876",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing",
+      "completion topic signaled run end"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        2.5,
+        2.5,
+        0.8
+      ],
+      "length": [
+        25.0,
+        25.0,
+        12.0
+      ],
+      "wind_vector": [
+        1.155,
+        -1.155,
+        -1.155
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_weak_low",
+    "status": "success",
+    "samples": 19287,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_low_20251105073500_1_3919/pinn/pinn_dataset_figure_eight-w6_weak_low_20251105073500_1_3919.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_low_20251105073500_1_3919/force/force_figure_eight-w6_weak_low_20251105073500_1_3919.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_low_20251105073500_1_3919/analytic/analytic_xy_figure_eight-w6_weak_low_20251105073500_1_3919.csv",
+    "started_at": "2025-11-05T07:35:00.801115",
+    "finished_at": "2025-11-05T07:39:17.045909",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        0.6,
+        0.6,
+        0.3
+      ],
+      "length": [
+        12.0,
+        12.0,
+        6.0
+      ],
+      "wind_vector": [
+        1.155,
+        -1.155,
+        -1.155
+      ]
+    }
+  },
+  {
+    "scenario": "figure_eight.w6_weak_medium",
+    "status": "success",
+    "samples": 19184,
+    "pinn_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_medium_20251105073917_1_2007/pinn/pinn_dataset_figure_eight-w6_weak_medium_20251105073917_1_2007.csv",
+    "force_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_medium_20251105073917_1_2007/force/force_figure_eight-w6_weak_medium_20251105073917_1_2007.csv",
+    "analytic_csv": "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_figure_eight-w6_weak_medium_20251105073917_1_2007/analytic/analytic_xy_figure_eight-w6_weak_medium_20251105073917_1_2007.csv",
+    "started_at": "2025-11-05T07:39:17.339295",
+    "finished_at": "2025-11-05T07:43:33.376869",
+    "attempts": 1,
+    "notes": [
+      "recorder grace window reached; finalizing"
+    ],
+    "metadata": {
+      "type": "composite",
+      "direction": "descending_oblique",
+      "speed": 2.0,
+      "speed_label": "weak",
+      "sigma": [
+        1.5,
+        1.5,
+        0.5
+      ],
+      "length": [
+        18.0,
+        18.0,
+        9.0
+      ],
+      "wind_vector": [
+        1.155,
+        -1.155,
+        -1.155
+      ]
+    }
+  }
+]

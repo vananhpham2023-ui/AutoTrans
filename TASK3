@@ -1,5 +1,152 @@
 # 概述
-该文档记录在 AutoTrans 仿真栈中提取PINN所需数据集，包括xxxx等步骤，便于后续按阶段推进。
+该文档记录在 AutoTrans 仿真栈中提取 PINN 所需数据集与相关自动化脚本，便于按阶段推进与复现。
+
+## 近期实现进展与变更记录（2025-11-05）
+
+- FSM 结束与 RViz 关闭稳定性
+  - 用 `pkill -SIGTERM` 替代 ROS 依赖的 `rosnode kill`，并在 C++ 侧用 `wait(2)` 宏解码 `std::system` 返回值：
+    - `WEXITSTATUS==0` 判定为成功；
+    - `WIFSIGNALED && WTERMSIG==SIGTERM`（`pkill` 自身被信号结束）视为“信号已发出”，同样判定成功；
+    - 其它情况才告警。
+  - 成功后保留 0.5 s 延迟，给 RViz 与 roslaunch 留出退出检测时间。
+
+- 事件驱动的批处理提前收敛（加速单场景周转）
+  - FSM 在解析轨迹完成（10 个周期）后发布一次性、latched 完成信号：绝对话题 `/mpc/run_completed`（修复了相对话题导致的命名空间偏移）。
+  - 新增辅助脚本 `wait_for_completion.py`（Rosrun 可调用）阻塞等待完成信号；失败会输出具体错误日志，便于排障。
+  - `batch_data_collection.py` 集成事件监听：
+    - 启动 roslaunch → 预热 → 启动 PINN 记录器 → 启动完成监听器；
+    - 监听器收到 `/mpc/run_completed` 立即触发对 roslaunch 的优雅终止；
+    - 仍保留 `--timeout` 作为兜底；
+    - 为避免静默失败，启动监听器后做一次 `poll()` 健康检查，若异常会在备注中标注并退回超时路径。
+  - 新增 CLI：`--completion-topic`（默认 `/mpc/run_completed`）。
+
+- force 对比图未生成的说明与建议
+  - 在关机序列较快时，`force_data_recorder` 可能正生成 PNG 而被上层 SIGTERM/SIGKILL 打断，导致仅有 CSV 无 PNG；
+  - 如需稳定产出 PNG，可在 `force_data_recorder` 增加 `~extra_wait_seconds` 或在 batch 中适当增大 `--recorder-grace`；
+  - 也可使用离线脚本 `plot_force_comparison.py` 对已有 CSV 进行补画。
+
+- 典型运行命令（带参数）
+  - 串行、完整集：
+    - `python3 src/AutoTrans/batch_data_collection.py --profile full --max-concurrency 1 --warmup 5 --timeout 420 --recorder-grace 30 --completion-topic /mpc/run_completed`
+  - 轻量检查：
+    - `python3 src/AutoTrans/batch_data_collection.py --profile lite --max-concurrency 1 --completion-topic /mpc/run_completed`
+
+- Checkpoint 与“从 0 开始”现象说明
+  - 默认断点文件：`controller/payload_mpc_controller/plots/batch_checkpoint.json`；
+  - 若切换到不同工作副本或指定了新的 `--checkpoint` 路径，会产生新的进度文件，看起来“从 0 开始”；
+  - 确认未使用 `--no-resume`，并保证本次场景选择与既有 checkpoint 匹配（`--profile/--scenarios/--include/--exclude/--config` 一致）。
+
+- 构建与环境
+  - C++ 变更后需 `catkin build payload_mpc_controller`（或 `catkin_make --pkg payload_mpc_controller`）并 `source devel/setup.bash`；
+  - 新增脚本 `wait_for_completion.py` 已加入 `catkin_install_python`，可 `rosrun payload_mpc_controller wait_for_completion.py` 调用。
+
+## 批量采集：场景覆盖与实验流程（论文复现实录）
+
+本文所用的数据集由脚本 `src/AutoTrans/batch_data_collection.py` 自动生成。该脚本在独立 ROS Master 上逐场景运行仿真，采集 PINN 训练所需变量与外力真值/估计值，并在解析轨迹完成后基于事件提前终止以提升吞吐。
+
+### 场景设计与命名
+
+1) 轨迹（TRAJECTORIES）
+- circle：半径 3.0 m，角速度 0.5 rad/s（周期约 12.57 s）
+- figure_eight：半径 3.0 m，角速度 0.3 rad/s（周期约 20.94 s）
+
+2) 纯湍流基线（PURE_TURBULENCE）
+- c1_low：σ = [0.6, 0.6, 0.3] m/s，长度尺度 = [12, 12, 6] m
+- c2_medium：σ = [1.5, 1.5, 0.5] m/s，长度尺度 = [18, 18, 9] m
+- c3_high：σ = [2.5, 2.5, 0.8] m/s，长度尺度 = [25, 25, 12] m
+
+3) 有平均风的组合（WIND_DIRECTIONS × SPEEDS × TURBULENCE_LEVELS）
+- 方向（6）：
+  - w1 horizontal_x = [V, 0, 0]
+  - w2 vertical     = [0, 0, V]
+  - w3 horizontal_diagonal = [V/√2, V/√2, 0]
+  - w4 ascending_oblique    = [V/√3, V/√3, V/√3]
+  - w5 biaxial_xy   = [V, V, 0]
+  - w6 descending_oblique = [V/√3, −V/√3, −V/√3]
+- 风速（3）：weak=2 m/s，medium=5 m/s，strong=9 m/s
+- 湍流等级（3）：low/medium/high（参数同上）
+
+4) 命名规范
+- 纯湍流：`<traj>.c{1|2|3}_{low|medium|high}`，如 `circle.c1_low`
+- 有平均风：`<traj>.<w{1..6}>_{weak|medium|strong}_{low|medium|high}`，如 `figure_eight.w4_strong_high`
+
+5) 场景数量
+- full 配置：每个轨迹 = 3（纯湍流）+ 6×3×3=54（定向）= 57；两条轨迹合计 114 个场景
+- lite 配置：每个轨迹 = 3 + 6×(2 风速：weak/strong)×(2 湍流：low/high)= 27；两条轨迹合计 54 个场景
+
+### 运行与提前终止策略
+
+- 预热：默认 5 s（`--warmup`）
+- 自动超时：按目标周期数（默认 10）× 轨迹周期 + `--timeout-margin`（默认 20 s）计算；作为兜底
+- 事件提前结束：FSM 在第 10 个周期收尾后发布一次性 latched 消息 `/mpc/run_completed`；batch 监听到后立刻优雅终止 roslaunch，并保留 `--recorder-grace`（默认 30 s）给记录器刷盘
+- 独立 ROS Master：为每个场景分配唯一端口，互不干扰
+
+### 数据产物与目录结构
+
+每个场景的输出位于：
+`controller/payload_mpc_controller/plots/run_<scenario>_<UTC>_<attempt>_<rand>/`
+
+- pinn/
+  - `pinn_dataset_<run_tag>.csv`
+  - 列包含（摘要）：
+    - 轨迹/风配置：`timestamp, scenario_id, trajectory_mode, wind_type`
+    - 飞行器状态：位置、速度、姿态部分元素（r13/r23/r33）、角速度、加速度
+    - 负载状态：位置、速度、加速度
+    - 系统参数：`motor_rpm_{1..4}, thrust_total, mass_quad, mass_load, l_length, sqrt_kf`
+    - 线缆方向：`cable_dir_{x,y,z}`
+    - 外力真值与估计：`fl_true_*, fq_true_*, fl_est_*, fq_est_*`
+    - 风速：`wind_{x,y,z}`
+  - 采样规模：以 circle 为例，10 个周期约 125–130 s，100 Hz 同步下约 12.5k 样本/场景
+
+- force/
+  - `force_<run_tag>.csv`（必有）与 `force_<run_tag>.png`（若关机序列足够宽松）
+  - 终端输出 RMSE 汇总：Load/Quad 各分量与合量
+
+- analytic/
+  - `analytic_xy_<run_tag>.csv/.svg`：二维轨迹对齐对比与 RMSE 标注
+
+### 批处理日志与断点续跑
+
+- 日志：`plots/logs/`
+  - `launch_*.log`、`recorder_*.log`、`waiter_*.log`、`roscore_*.log`
+- 断点：`plots/batch_checkpoint.json`（可通过 `--checkpoint` 自定义路径）
+  - 默认启用 resume（未指定 `--no-resume`）；`--status-only` 可查看已完成/失败条目
+
+### 复现实验命令（示例）
+
+1) 完整集（full）串行：
+```
+python3 src/AutoTrans/batch_data_collection.py \
+  --profile full \
+  --max-concurrency 1 \
+  --warmup 5 \
+  --timeout 420 \
+  --recorder-grace 30 \
+  --completion-topic /mpc/run_completed
+```
+
+2) 轻量集（lite）串行：
+```
+python3 src/AutoTrans/batch_data_collection.py \
+  --profile lite \
+  --max-concurrency 1 \
+  --completion-topic /mpc/run_completed
+```
+
+3) 断点复用（跨目录）：
+```
+python3 src/AutoTrans/batch_data_collection.py \
+  --profile full \
+  --checkpoint /path/to/old/batch_checkpoint.json \
+  --completion-topic /mpc/run_completed
+```
+
+### 备注与经验
+
+- RViz 退出：已通过 `pkill` + 正确状态解码稳定处理；收到完成事件后通常 1–2 s 内结束场景
+- 力图 PNG：若关机较快可能缺失，增大 `--recorder-grace` 或事后用 `plot_force_comparison.py` 离线生成
+- 典型成功率：脚本自带重试（默认 2 次）；失败重试后大多数场景可收敛；详见 `batch_run_report.json`
+
 
 
 

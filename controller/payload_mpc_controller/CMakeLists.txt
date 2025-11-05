@@ -105,6 +105,7 @@ catkin_install_python(PROGRAMS
   scripts/force_data_recorder.py
   scripts/plot_force_comparison.py
   scripts/pinn_data_recorder.py
+  scripts/wait_for_completion.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
