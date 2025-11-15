@@ -20,6 +20,7 @@ try:
         CSV_FIELDS,
         compute_rmse,
         render_force_plot,
+        render_wind_velocity_plot,
         plt as plotter_plt,
     )
 except ImportError:
@@ -34,6 +35,7 @@ except ImportError:
         CSV_FIELDS,
         compute_rmse,
         render_force_plot,
+        render_wind_velocity_plot,
         plt as plotter_plt,
     )
 
@@ -46,7 +48,7 @@ class ForceDataRecorder:
         self.est_topic = rospy.get_param("~estimated_force_topic", "/mpc_controller_node/mpc/force")
         self.cycles_to_report = rospy.get_param("~cycles_to_report", 10)
         self.extra_wait = rospy.get_param("~extra_wait_seconds", 0.0)
-        self.wind_topic = rospy.get_param("~wind_topic", "")
+        self.wind_topic = rospy.get_param("~wind_topic", "/so3_quadrotor/wind")
         self._wind_enabled = bool(self.wind_topic)
 
         self._samples: List[Dict[str, np.ndarray]] = []
@@ -70,6 +72,8 @@ class ForceDataRecorder:
         prefix = f"force_{safe_tag}"
         self.csv_path = os.path.join(output_dir, f"{prefix}.csv")
         self.png_path = os.path.join(output_dir, f"{prefix}.png")
+        self.totals_png_path = os.path.join(output_dir, f"{prefix}_totals.png")
+        self.wind_png_path = os.path.join(output_dir, f"{prefix}_wind.png")
         rospy.loginfo("[force_data_recorder] Writing outputs under %s (run_tag=%s)", output_dir, safe_tag)
 
         self._cycle_seconds = self._cycle_duration()
@@ -363,10 +367,40 @@ class ForceDataRecorder:
         )
 
         try:
-            render_force_plot(samples, output_path=self.png_path, show=False, rmse=rmse)
-            rospy.loginfo("[force_data_recorder] Saved force comparison plot to %s", self.png_path)
+            render_force_plot(
+                samples,
+                output_path=self.png_path,
+                total_output_path=self.totals_png_path,
+                show=False,
+                rmse=rmse,
+            )
+            rospy.loginfo(
+                "[force_data_recorder] Saved force comparison plots to %s and %s",
+                self.png_path,
+                self.totals_png_path,
+            )
         except RuntimeError as exc:
             rospy.logwarn("Failed to render force comparison plot: %s", exc)
+
+        if self._wind_enabled:
+            wind_samples = [s for s in samples if "wind" in s]
+            if wind_samples:
+                try:
+                    render_wind_velocity_plot(
+                        wind_samples,
+                        output_path=self.wind_png_path,
+                        show=False,
+                    )
+                    rospy.loginfo(
+                        "[force_data_recorder] Saved wind velocity plot to %s",
+                        self.wind_png_path,
+                    )
+                except RuntimeError as exc:
+                    rospy.logwarn("Failed to render wind velocity plot: %s", exc)
+            else:
+                rospy.logwarn(
+                    "[force_data_recorder] Wind topic configured but no wind data recorded; skipping wind plot."
+                )
 
     def _on_shutdown(self) -> None:
         if not self._report_generated:

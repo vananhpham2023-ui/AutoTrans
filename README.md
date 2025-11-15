@@ -70,7 +70,7 @@ roslaunch payload_planner controller_only.launch trajectory_mode:=helix
   - `rostopic echo /mpc_controller_node/mpc/reference_trajectory`
   - `rostopic echo /mpc_controller_node/mpc/trajectory_predicted`
   - RViz 自动加载 `controller_only.rviz`，仅保留控制相关显示；`Geometry` MarkerArray 渲染当前（实际/预测）无人机、载荷及缆绳模型，参考轨迹保留为 Path 方便对比。
-- 解析模式运行 10 个周期后，控制节点会在日志中输出无人机/载荷的 RMSE，并在 `payload_mpc_controller/plots/` 下生成 `analytic_xy.csv` 与 `analytic_xy.svg`（图像会通过 `xdg-open` 自动弹出）。
+- 解析模式运行 10 个周期后，控制节点会在日志中输出无人机/载荷的 RMSE，并在 `payload_mpc_controller/plots/` 下生成 `analytic_xy.csv` 与 `analytic_xy.png`（图像会通过 `xdg-open` 自动弹出）。
 - 若启用外力估计器（默认开启），仿真器会额外发布 `/true_force` 真值并与 `/mpc/force` 估计值对齐；`force_data_recorder` 会在 `plots/` 目录下写出 `force_comparison.csv/.png`，终端同步打印 RMSE。
 - 想要在线切换轨迹，可执行：
   ```bash
@@ -203,7 +203,7 @@ roslaunch payload_planner replan.launch use_planner:=true
 ## 验证清单
 - `catkin build` 与 `reference_generator_test` 均通过。
 - `controller_only.launch` 下 `/mpc/reference_trajectory` 与 `/mpc/trajectory_predicted` 在 RViz 中对齐，日志提示 `ANALYTIC trajectory tracking`。
-- 运行约 10 个周期后，日志出现 `ANALYTIC RMSE (...)` 且自动生成/弹出 `analytic_xy.svg`。
+- 运行约 10 个周期后，日志出现 `ANALYTIC RMSE (...)` 且自动生成/弹出 `analytic_xy.png`。
 - 切回 `use_planner:=true` 后日志出现 `ANALYTIC --> HOVER`，规划器话题恢复订阅。
 - `roswtf` 与 `rostopic hz` 未报频率/连接异常。
 

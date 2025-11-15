@@ -167,7 +167,7 @@ rviz.launch：
 - 新增 `controller/payload_mpc_controller/test/reference_generator_test.cpp` 覆盖圆/八字/螺旋解析轨迹的 PVAJSC 公式、终端冻结与 `reset()` 行为；对应的 CMake 调整测试目标的 include 路径并显式链接 `gtest_main`。
 - 通过 `catkin build payload_mpc_controller --no-deps --catkin-make-args reference_generator_test` 生成测试二进制，执行 `devel/.private/payload_mpc_controller/lib/payload_mpc_controller/reference_generator_test` 获取 3/3 PASS。
 - `MPCFSM::publishPrediction` 维护参考轨迹历史并发布 `mpc/reference_geometry` MarkerArray，RViz 中仅展示当前（实际/预测）无人机、载荷、缆绳模型，同时保留完整参考路径。
-- `finalizeAnalyticRun()` 在解析模式运行 10 个周期后自动统计 RMSE、导出 `plots/analytic_xy.csv` 与 `plots/analytic_xy.svg` 并通过桌面默认程序打开图像，日志同步输出 RMSE。
+- `finalizeAnalyticRun()` 在解析模式运行 10 个周期后自动统计 RMSE、导出 `plots/analytic_xy.csv` 与 `plots/analytic_xy.png` 并通过桌面默认程序打开图像，日志同步输出 RMSE。
 - `controller_only.launch` 默认同步模拟器初始状态到解析轨迹起点，`controller_only.rviz`/`sim_vis.rviz` 调整 ForceMarker 类型并加入 Geometry 显示项。
 
 测试方法：

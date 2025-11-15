@@ -167,7 +167,7 @@ rosparam set /mpc_controller_node/reference/mode helix
 When running in analytic trajectory mode, the controller:
 - Publishes reference and predicted trajectories to `/mpc_controller_node/mpc/reference_trajectory` and `/mpc_controller_node/mpc/trajectory_predicted`
 - Computes and logs RMSE after ~10 cycles
-- Generates CSV and SVG plots in `controller/payload_mpc_controller/plots/analytic_xy.*`
+- Generates CSV and PNG plots in `controller/payload_mpc_controller/plots/analytic_xy.*`
 - Auto-opens SVG visualization with `xdg-open`
 
 ## Important Notes

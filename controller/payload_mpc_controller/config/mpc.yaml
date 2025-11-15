@@ -93,7 +93,7 @@ force_estimator: # *
     cutoff_freq_fl: 0.0                 # 负载力信号的低通滤波截止频率(Hz)，0表示不过滤
     imu_body_length: 0.66844507         # IMU到机体中心的距离(m)
     use_force_estimator: true           # 是否使用力估计器
-    max_force: 4.0                      # 最大允许估计力值(N)
+    max_force: 10.0                      # 最大允许估计力值(N)
     max_queue: 80                       # 力估计器使用的最大队列长度
     force_observer_freq: 400.0          # 力观测器运行频率(Hz)
     var_weight: 80.0                    # 方差权重参数，用于力估计器计算

@@ -1436,10 +1436,10 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 		csv.close();
 	}
 	std::string script = package_path + "/scripts/plot_xy.py";
-	std::string svg_path = plot_dir + "/" + base_name + ".svg";
+	std::string png_path = plot_dir + "/" + base_name + ".png";
 	std::ostringstream cmd;
 	cmd << "python3 \"" << script << "\" \"" << csv_path << "\" "
-		<< quad_rmse << ' ' << payload_rmse << " \"" << svg_path << "\"";
+		<< quad_rmse << ' ' << payload_rmse << " \"" << png_path << "\"";
 	int ret = std::system(cmd.str().c_str());
 	if (ret != 0)
 	{
@@ -1447,8 +1447,8 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 	}
 	else
 	{
-		ROS_INFO_STREAM("[MPCctrl] Analytical XY plot saved to " << svg_path);
-		std::string open_cmd = std::string("xdg-open \"") + svg_path + "\" >/dev/null 2>&1 &";
+		ROS_INFO_STREAM("[MPCctrl] Analytical XY plot saved to " << png_path);
+		std::string open_cmd = std::string("xdg-open \"") + png_path + "\" >/dev/null 2>&1 &";
 		int open_ret = std::system(open_cmd.c_str());
 		if (open_ret != 0)
 		{

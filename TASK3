@@ -1,6 +1,14 @@
 # 概述
 该文档记录在 AutoTrans 仿真栈中提取 PINN 所需数据集与相关自动化脚本，便于按阶段推进与复现。
 
+#轻度湍流
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,5.2,5.2]' wind_dryden_sigma:='[1.086,1.086,0.77]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+#中度湍流
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,5.2,5.2]' wind_dryden_sigma:='[2.171,2.171,1.54]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+#重度湍流
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,5.2,5.2]' wind_dryden_sigma:='[3.256,3.256,2.31]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+
+
 ## 近期实现进展与变更记录（2025-11-05）
 
 - FSM 结束与 RViz 关闭稳定性
@@ -103,7 +111,7 @@
   - 终端输出 RMSE 汇总：Load/Quad 各分量与合量
 
 - analytic/
-  - `analytic_xy_<run_tag>.csv/.svg`：二维轨迹对齐对比与 RMSE 标注
+  - `analytic_xy_<run_tag>.csv/.png`：二维轨迹对齐对比与 RMSE 标注
 
 ### 批处理日志与断点续跑
 

@@ -1,0 +1,276 @@
+# PINN外力估计器移植方案总览
+
+## 项目目标
+
+将基于Physics-Informed Neural Network (PINN)的外力估计器从PyTorch移植到AutoTrans C++项目中(已有训练好的模型src/AutoTrans/force_estimation_script3.pt),替换现有的基于L-BFGS优化的外力估计器。
+
+## 1. 现状分析
+
+### 1.1 现有C++外力估计器 (L-BFGS based)
+
+**文件位置**: src/AutoTrans/controller/payload_mpc_controller/include/payload_mpc_controller/optimization_based_force_estimator_lbfgs.hpp、
+              src/AutoTrans/controller/payload_mpc_controller/include/payload_mpc_controller/multi_optimization_based_force_estimator_min_length.hpp、
+              src/AutoTrans/controller/payload_mpc_controller/include/payload_mpc_controller/multi_optimization_based_force_estimator.hpp
+
+**核心特点**:
+- 基于物理约束的优化求解
+- 使用L-BFGS算法实时求解
+- 输入: 四旋翼加速度、负载加速度、缆绳方向、推力、姿态等
+- 输出: fq(四旋翼外力, 3维) + fl(负载外力, 3维)
+- 物理约束:
+  - r1: 力平衡 (fl + fq = m_total * acc - thrust)
+  - r2: 力矩平衡 (基于缆绳方向)
+  - r3: 平行约束 (fl ⊥ rho)
+- 优点: 实时性好、物理解释性强、无需离线训练
+- 缺点: 依赖精确物理模型、对未建模动态敏感、计算量较大
+
+### 1.2 PINN模型 (PyTorch)
+
+**模型文件（默认路径）**: `src/AutoTrans/force_estimation_script3.pt`（通过 ROS 参数配置，默认指向该文件）
+**模型类型**: TorchScript（ScriptModule/Trace），可用 LibTorch `torch::jit::load` 直接推理
+**训练代码**: deepxde 工程中的 `force_estimation.py`（外部仓库，仅在需要重新导出/再训练时使用）
+
+**核心特点**:
+- 网络结构: 13输入 → 128 → 128 → 128 → 128 → 128 → 6输出
+- 激活函数: tanh
+- 输入特征(13维):
+  - accQ_x, accQ_y, accQ_z (四旋翼加速度)
+  - accL_x, accL_y, accL_z (负载加速度)
+  - rho_x, rho_y, rho_z (缆绳单位方向向量)
+  - R13，R23，R33 (旋转矩阵第三列)
+  - thrust (推力标量)
+- 输出: fQ(3) + fL(3)
+- 训练时融合物理约束作为损失函数
+- 优点: 数据驱动、能学习未建模动态、推理快速
+- 缺点: 需要离线训练、泛化性依赖训练数据
+
+## 2. 移植方案概述
+
+### 方案A: LibTorch集成 (推荐)
+- 使用PyTorch C++ API (LibTorch)直接加载.pt模型
+- 开发量: 低
+- 性能: 良好(GPU可选)
+- 维护性: 好
+
+
+## 3. 技术架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              MPC Controller Node (ROS)                  │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│         BaseForceEstimator / PINNForceEstimator        │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  接口层 (与现有估计器兼容)                    │   │
+│  │  - init(MpcParams &params)                     │   │
+│  │  - enable/disableForceEstimator()              │   │
+│  │  - setSystemState(...)                         │   │
+│  │  - caculate_force(fl, fq)                      │   │
+│  └──────────────┬──────────────────────────────────┘   │
+│                 │                                       │
+│  ┌──────────────▼──────────────────────────────────┐   │
+│  │  特征提取与归一化                                │   │
+│  │  - 13维输入特征构建                              │   │
+│  │  - MinMax归一化 [-1, 1]                         │   │
+│  └──────────────┬──────────────────────────────────┘   │
+│                 │                                       │
+│  ┌──────────────▼──────────────────────────────────┐   │
+│  │  神经网络推理引擎                                │   │
+│  │  - LibTorch / 纯Eigen                           │   │
+│  │  - 6层全连接网络                                 │   │
+│  └──────────────┬──────────────────────────────────┘   │
+│                 │                                       │
+│  ┌──────────────▼──────────────────────────────────┐   │
+│  │  输出后处理                                       │   │
+│  │  - 反归一化                                       │   │
+│  │  - 低通滤波 (可选)                               │   │
+│  │  - 幅值限制                                       │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+## 4. 目录结构（集成方案）
+
+本文件 `src/AutoTrans/TASK6` 作为设计文档存在，具体实现直接集成到现有 `payload_mpc_controller` 包中，而不是单独建立新的 catkin 包或 CMake 工程。
+
+建议的代码组织如下：
+
+```
+src/AutoTrans/controller/payload_mpc_controller/
+├── include/payload_mpc_controller/
+│   ├── base_force_estimator.hpp          # 新增：抽象基类接口
+│   ├── pinn_force_estimator.hpp          # 新增：PINN 实现（LibTorch）
+│   ├── multi_optimization_based_force_estimator.hpp
+│   ├── optimization_based_force_estimator_lbfgs.hpp
+│   └── force_estimator.hpp
+├── src/
+│   ├── pinn_force_estimator_libtorch.cpp # 新增：PINN 实现
+│   ├── mpc_fsm.cpp                       # 修改：通过 BaseForceEstimator 选择 PINN / L-BFGS
+│   └── ...
+├── scripts/
+│   ├── pinn_data_recorder.py             # 已有：PINN 数据采集
+│   ├── compute_normalizer_stats.py       # 新增：统计归一化参数（计划）
+│   └── test_inference.py                 # 新增：Python 对比测试（计划）
+├── test/
+│   ├── test_pinn_estimator.cpp           # 新增：C++ 单元测试（计划）
+│   └── reference_generator_test.cpp
+└── CMakeLists.txt                        # 修改：集成 LibTorch 和 pinn_force_estimator
+```
+
+## 5. 关键技术点
+
+### 5.1 输入特征映射
+| PINN输入特征 | C++数据源 | 备注 |
+|-------------|----------|------|
+| accQ (3维) | quad_acc_ | 四旋翼 IMU 线加速度（与 `pinn_data_recorder.py` 中 `quad_acc_*` 完全一致，当前实现直接来自 `sensor_msgs/Imu.linear_acceleration`，坐标系与训练脚本保持一致，通常为机体系；**不得在 C++ 端额外旋转或补偿，否则与训练分布不匹配**） |
+| accL (3维) | load_acc_ | 负载 IMU 线加速度（与 `pinn_data_recorder.py` 中 `load_acc_*` 完全一致，当前实现直接来自 `payload_imu.linear_acceleration`，坐标系与训练脚本保持一致） |
+| rho (3维) | cable_ | 缆绳单位方向向量（与 `pinn_data_recorder.py` 中 `cable_dir_*` 一致，由 `cable.angular_velocity` 归一化得到） |
+| R13，R23，R33 (3维) | quad_q_.toRotationMatrix().col(2) | 机体 z 轴在世界坐标系下的方向（与 `pinn_data_recorder.py::_quat_third_column` 逻辑一致） |
+| thrust (1维) | T_ | 推力标量（由 kf 和 RPM 计算，对应 `pinn_data_recorder.py::_resolve_rpm` 中的 `thrust_total`） |
+
+### 5.2 归一化处理
+PINN模型训练时使用了MinMax归一化到[-1, 1]:
+- 归一化参数由 `scripts/compute_normalizer_stats.py` 基于 `plots/pinn_dataset/pinn_dataset_*.csv` 统计生成，落盘为：
+  - `normalizer_stats.json`：主配置文件（包含 13 维输入和 6 维输出的 min/max/mean/std），供 C++/Python 共用；
+  - `normalizer_stats.pkl`：可选的 Python pickle 版本，仅供训练/分析脚本使用，如现有训练脚本不依赖，可以不生成该文件以简化流程。
+- C++ 端仅解析 `normalizer_stats.json`，复现与训练阶段一致的归一化逻辑。约定 MinMax 公式为（对每一维）：
+  - `x_clamped = clip(x, min, max)`
+  - `x_norm = 2 * (x_clamped - min) / (max - min) - 1`
+- 输出 `fQ/fL` 需进行反归一化并必要时截断：
+  - `y = 0.5 * (y_norm + 1) * (max - min) + min`
+  - 对反归一化结果再做幅值限制（见 5.3 / 6.2）。
+
+### 5.3 实时性要求
+- MPC控制器频率: ~100-333Hz
+- 单次推理延迟要求: <3ms
+- LibTorch 引入后，对 `mpc_controller_node` 的**新增**内存占用需在可接受范围内（建议：新增常驻内存 < 150MB，具体以性能基准测试数据为准）
+
+## 6. 开发计划
+
+### 阶段一: LibTorch 集成与模型规范 (1-2天)
+- [] 明确推理后端与设备：锁定 `LibTorch 2.1.0 / CPU`，要求在系统中预先安装 LibTorch，并通过 `Torch_DIR` / `LIBTORCH_HOME` 在 CMake 中找到。
+- [] CMake 依赖与工程基线调整（直接集成到现有 catkin 包）：
+  - [] 将 `controller/payload_mpc_controller/CMakeLists.txt` 中的 `cmake_minimum_required` 至少提升到 3.18，以满足 LibTorch CMake config 要求，并确保 catkin 工具链/CI 能兼容；
+  - [] 在 `project(payload_mpc_controller ...)` 之前/之后统一切换到 C++17（例如 `set(CMAKE_CXX_STANDARD 17)`，避免继续使用仅支持 C++14 的设定）；
+  - [] 在 `controller/payload_mpc_controller/CMakeLists.txt` 中增加 `find_package(Torch REQUIRED)`，并使用 `TORCH_CXX_FLAGS` 更新编译选项；
+  - [] 将 `TORCH_INCLUDE_DIRS` 加入目标的 `target_include_directories`，并在 `target_link_libraries` 中链接 `${TORCH_LIBRARIES}`；
+  - [] 代码组织上有两种选项，可按实际需要选择其一：
+    - 选项 A（更模块化）：新建静态库 `pinn_force_estimator`（依赖 Torch + Eigen），并将其链接到现有的 `mpc_controller_node` 以及测试/CLI 目标；
+    - 选项 B（更简单）：直接将 `pinn_force_estimator_libtorch.cpp` 加入 `mpc_controller_node` 的源文件列表，不额外拆分静态库。
+- [] 模型与归一化文件规范与安装：
+  - [] 默认模型文件为 `src/AutoTrans/force_estimation_script3.pt`（开发阶段可放在源码树中），通过 ROS 参数 `force_estimator.pinn.model_path` 传入；
+  - [] 模型路径解析建议采用 `ros::package::getPath("payload_mpc_controller") + "/models/force_estimation_script3.pt"` 这类形式，或在 YAML 中显式给出绝对路径，避免依赖当前工作目录；
+  - [] 在 `catkin_make install` 或打包流程中，将 `.pt` 模型和 `normalizer_stats.json`（以及可选的 `.pkl`）安装到固定的包内目录（例如 `share/payload_mpc_controller/models/`），并在默认 YAML 中以该安装路径为基础配置 `model_path`/`normalizer_path`——这是发布环境的**必需步骤**，而非可选优化。
+- [] 归一化参数准备：
+  - [] 前置条件：通过运行 `scripts/pinn_data_recorder.py` 在不同场景（circle/figure_eight、多风场等）下采集数据，生成 `plots/pinn_dataset/pinn_dataset_*.csv`；
+  - [] 新增 `scripts/compute_normalizer_stats.py`，汇总上述 CSV（目标约 1.7M 样本），生成 `normalizer_stats.json` / `normalizer_stats.pkl`（含 Min/Max/Mean/Std），并放置在可配置路径下（例如 `payload_mpc_controller/models/`）；
+  - [] 在本文件或单独的 `docs/04_接口设计.md` 中说明 13×输入/6×输出特征、MinMax 公式与异常值处理策略。
+- [] 快速加载自检：
+  - [] 通过简单 CLI 或 gtest 可执行程序（例如 `pinn_estimator_cli --mode=smoke`）调用 `torch::jit::load` 对模型前向若干次，确认加载正常、延迟在预期范围内；不必强制维护独立的 smoke 可执行程序。
+
+验收标准：
+- [] `.pt` 模型能被自检 CLI（例如 `pinn_estimator_cli --mode=smoke`）成功加载并完成简单前向推理；
+- [] `normalizer_stats.json` / `.pkl` 可被 Python 解析且覆盖全部 13+6 维特征；
+- [] 简单前向延迟（单次）在 1 ms 以内（目标：平均 < 0.1 ms）。
+
+### 阶段二: 核心功能开发 (3-5天)
+- [] 抽象接口与实现（`include/payload_mpc_controller`）：
+  - [] 新增 `base_force_estimator.hpp`，定义抽象基类 `BaseForceEstimator`：
+    - `virtual ~BaseForceEstimator() = default;`（必须提供虚析构，保证通过基类指针安全删除派生类）；
+    - `init(MpcParams &params)`
+    - `enableForceEstimator()` / `disableForceEstimator()`
+    - `setSystemState(const Eigen::Vector3d &quad_acc_body, const Eigen::Quaterniond &Rotwb, const Eigen::Vector3d &load_acc_body, const Eigen::Quaterniond &load_Rotwb, const Eigen::Vector3d cable, const Eigen::Vector4d &Rpm)`
+    - `caculate_force(Eigen::Vector3d &fl, Eigen::Vector3d &fq)`（保持现有拼写，方便接入）；
+    - 禁止拷贝（显式删除拷贝构造/赋值），以避免误拷贝包含内部状态的估计器实例。
+  - [] 让现有的 `MultiOptForceEstimator` / `OptForceEstimator` 继承该基类（接口不变，方便在 FSM 中统一持有指针）。
+  - [] 新增 `pinn_force_estimator.hpp` / `pinn_force_estimator_libtorch.cpp`，实现 `PinnForceEstimator`，继承 `BaseForceEstimator`。
+- [] 参数结构扩展（`mpc_params.h` 与 YAML）：
+  - [] 在 `MpcParams` 中增加 `std::string force_estimator_type`（或等价枚举）以及 `struct PinnForceEstimatorConfig`，至少包含：
+    - `std::string model_path;`
+    - `std::string normalizer_path;`
+    - `double ema_alpha;`
+    - `int failover_threshold;`（连续推理失败次数阈值，超过后自动回退）；
+  - [] 在 `config_from_ros_handle()` 中从 YAML 读取上述字段（例如 `force_estimator/type`、`force_estimator/pinn/model_path` 等），同时保证与旧配置兼容：
+    - 对新字段使用 `getParam` 及合理默认值（如 `force_estimator_type` 默认 `\"lbfgs\"`），仅在需要启用 PINN 且缺少关键配置时给出错误并禁用 PINN，而不是直接 `ROS_BREAK`；
+    - 对历史必需字段继续使用 `read_essential_param`，避免破坏现有 L-BFGS 流程；
+    - 在 `mpc.yaml` 提供完整示例（含 `force_estimator/type` 与 `force_estimator/pinn/*`），并在升级说明中提示用户如何迁移旧配置。
+- [] 特征提取与归一化（`src/pinn_force_estimator_libtorch.cpp`）：
+  - [] 在 `PinnForceEstimator::setSystemState` 中**不要**重用 `MultiOptForceEstimator::setSystemState`，也不要引入杆长补偿、状态队列等 L-BFGS 专用逻辑；
+  - [] 直接复现 `scripts/pinn_data_recorder.py` 的特征构造路径：从与训练时相同的物理量（odom/IMU/负载 odom/负载 IMU/cable/RPM）构造 13 维输入向量，使每一维与 CSV 字段一一对应（包括坐标系和单位），确保输入分布与训练期一致；
+  - [] 构造完成后按 `normalizer_stats.json` 做 MinMax 归一化。
+- [] 推理引擎集成：
+  - [] 在 `init` 阶段根据 `PinnForceEstimatorConfig` / `MpcParams` 加载 TorchScript 模型（`torch::jit::load`），使用 `torch::NoGradGuard`；
+  - [] 预分配用于输入/输出的 `torch::Tensor` 和 `std::vector<torch::jit::IValue>` 缓冲区，在估计器生命周期内复用，避免在 300Hz 控制回路中每次创建/销毁对象；
+  - [] 将 13 维输入通过 `torch::from_blob` 或等价方式绑定到已有的 Eigen/数组缓冲上，在 C++ 端执行前向推理，得到 6 维输出；
+  - [] 按归一化配置反归一化为物理量级的 `fQ(3) + fL(3)`。
+- [] 输出后处理与异常处理：
+  - [] 使用 `max_force` 对 `fQ/fL` 做幅值限制，并可选一阶 EMA 滤波（`ema_alpha`=1 表示直通）；
+  - [] 若估计器未启用或推理/反归一化过程中出现异常（抛异常、产生 NaN/Inf），则当前周期输出零向量并记录错误计数，必要时自动禁用 PINN 或切换回 L-BFGS。
+
+验收标准：
+- [] 对同一输入（含归一化），C++ 推理与 Python 对齐（MAE < 1e-3 N，目标 < 1e-4 N，排除浮点/激活误差）；
+- [] `caculate_force()` 单次推理端到端延迟 P95 < 3 ms，平均明显低于 L-BFGS 版本。
+
+### 阶段三: 测试与验证 (2-3天)
+- [] 单元测试：`test/test_pinn_estimator.cpp`
+  - [] 覆盖初始化失败（模型文件缺失/归一化配置错误）、禁用输出归零、`max_force` 饱和、EMA 滤波行为、推理异常回退等典型场景。
+- [] 精度对比：`scripts/test_inference.py`
+  - [] 采样若干 `pinn_dataset_*.csv`（覆盖 circle/figure_eight 多风场），逐条对比 Python vs C++ 输出；
+  - [] 可选输出 `parity_report.json`（记录 6 维 MAE/最大误差，不必纳入版本控制）。
+- [] 性能基准：
+  - [] 通过统一的 CLI 或 gtest 基准（例如 `pinn_estimator_cli --mode=benchmark`）执行 1e4 次端到端推理，统计延迟分布；同一二进制也可提供 `--mode=smoke` 模式以复用加载/自检逻辑；
+  - [] 可选输出 `perf_report.json`（记录 mean/P95/P99/最大值，用于回归）。
+- [] 集成验证：
+  - [] 使用已有仿真/实采数据（circle / figure_eight，多风场）离线跑一遍 `PinnForceEstimator`，确认计算稳定无崩溃。
+
+验收标准：
+- [] Python vs C++ MAE < 1e-3 N（期望最大误差 ~1e-5 N 级别）；
+- [] 1e4 次推理平均延迟 < 0.1 ms，P95 < 0.3 ms（具体数值根据实际平台调整）；
+- [] 数据集级联跑通，无异常退出，满足集成稳定性要求。
+
+### 阶段四: 系统集成 (1-2天)
+- [ ] 控制器接入与可配置：
+  - [ ] 在 `MPCFSM` 中将成员变量从具体类型 `MultiOptForceEstimator force_estimator_` 调整为 `std::unique_ptr<BaseForceEstimator> force_estimator_`；
+  - [ ] 新增 ROS 参数 `/mpc_controller_node/force_estimator/type`，取值 `pinn | lbfgs`，在构造 `MPCFSM` 时根据该参数实例化对应估计器：
+    - 当为 `pinn` 时，创建 `PinnForceEstimator` 并加载模型；
+    - 当为 `lbfgs` 时，创建 `MultiOptForceEstimator`（保持现有行为）。
+  - [ ] 在 `config/mpc.yaml` 中增加 `force_estimator/type` 以及 `force_estimator/pinn` 子配置（至少包含 `model_path` / `normalizer_path` / `ema_alpha` 等必要参数），并为未配置 PINN 的场景提供默认值（例如 `type: lbfgs`），避免旧配置文件在升级后直接崩溃。
+- [ ] 默认替换策略与回退：
+  - [ ] 默认启用 PINN，但保留 L-BFGS 作为回退；当模型加载失败或运行时连续 N 次推理异常时，自动切回 L-BFGS 或禁用估计器，并打印明显的 ROS 日志。
+- [ ] 输入数据链对齐与话题兼容：
+  - [ ] 集成 PINN 时，确保传入 `PinnForceEstimator::setSystemState` 的信号与训练时的 CSV 源一致（例如使用 `imu_data.a`、`payload_imu_data.a`、`cable_info_data.w` 等原始量，而非额外滤波或补偿后的版本），或者在重新生成数据集与再训练时同步采用相同的滤波链；
+  - [ ] ROS 输出话题名称、数据结构与单位保持与现有力估计器完全一致，便于上层控制与可视化复用。
+- [ ] 实际飞行/高保真仿真回归：
+  - [ ] 重点场景：无风、恒定风、阵风/湍流；低推力边界；强机动；对比 PINN / L-BFGS 在轨迹 RMSE 和控制稳定性上的差异。
+
+验收标准：
+- [ ] 启停与切换无缝且可回滚（在参数切换或异常回退时不引入明显控制突变）；
+- [ ] 文档与配置完整，`README`/本文件能指导从零环境到完整集成的复现流程。
+
+## 7. 风险评估
+
+| 风险项 | 概率 | 影响 | 缓解措施 |
+|-------|------|------|---------|
+| 模型精度损失 | 中 | 高 | 严格的精度测试,保留L-BFGS备选 |
+| 实时性不达标 | 低 | 高 | 性能基准测试,优化或降级 |
+| 依赖库冲突 | 中 | 中 | 使用容器隔离或静态链接 |
+| 泛化性问题 | 中 | 高 | 收集更多训练数据,混合策略 |
+
+## 8. 后续优化方向
+
+1. **模型量化**: INT8量化以提升推理速度
+2. **在线自适应**: 结合在线学习技术
+3. **混合策略**: PINN + L-BFGS融合估计
+4. **模型剪枝**: 减小模型体积
+
+## 9. 参考资料
+1. PyTorch LibTorch C++ 前端与 JIT 模型加载
+2. Physics-Informed Neural Networks 概述与实践
+3. AutoTrans 控制器外力估计相关代码：
+   - `src/AutoTrans/controller/payload_mpc_controller/include/payload_mpc_controller/optimization_based_force_estimator_lbfgs.hpp`
+   - `src/AutoTrans/controller/payload_mpc_controller/include/payload_mpc_controller/force_estimator.hpp`
+- PyTorch C++ API: https://pytorch.org/cppdocs/
+- 原论文相关资料 (如有)

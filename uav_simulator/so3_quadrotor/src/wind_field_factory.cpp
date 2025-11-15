@@ -143,11 +143,10 @@ class DrydenWindField : public WindFieldBase
 public:
   explicit DrydenWindField(const DrydenWindConfig &config)
       : config_(config),
-        state_(Eigen::Vector3d::Zero()),
         last_time_(std::numeric_limits<double>::quiet_NaN()),
         generator_(config.seed ? config.seed : std::random_device{}()),
         normal_dist_(0.0, 1.0),
-        base_bandwidth_(std::max(config.bandwidth, 1e-3)),
+        airspeed_(std::max(config.bandwidth, 1e-3)),
         length_scale_{1.0, 1.0, 1.0}
   {
     for (int i = 0; i < 3; ++i)
@@ -162,6 +161,11 @@ public:
     if (std::isfinite(last_time_))
     {
       dt = std::max(0.0, time_sec - last_time_);
+      // 对于过大的时间步长，进行裁剪以保持数值稳定
+      if (dt > 0.5)
+      {
+        dt = 0.5;
+      }
     }
     last_time_ = time_sec;
 
@@ -178,31 +182,141 @@ public:
       sigma *= attenuation;
     }
 
-    for (int i = 0; i < 3; ++i)
+    const double V = std::max(airspeed_, 1e-3);
+    const double sqrt_dt = std::sqrt(dt);
+
+    Eigen::Vector3d gust = Eigen::Vector3d::Zero();
+
+    // MIL-F-8785C Dryden 模型：
+    // u 轴（一阶）： G_u(s) = σ_u * sqrt(2 V / L_u) / (s + V / L_u)
     {
-      const double tau = length_scale_[i] / base_bandwidth_;
-      const double alpha = std::exp(-dt / tau);
-      const double sigma_abs = std::fabs(sigma[i]);
-      if (sigma_abs < 1e-6)
+      const double Lu = length_scale_[0];
+      const double sigma_u = std::fabs(sigma[0]);
+
+      if (sigma_u > 1e-6 && Lu > 1e-6)
       {
-        state_[i] = alpha * state_[i];
-        continue;
+        const double a_u = V / Lu;
+        const double b0_u = sigma_u * std::sqrt(2.0 * V / Lu);
+
+        // 一阶 SDE：dx = -a_u x dt + dW,  y = b0_u x
+        u_state_ += (-a_u * u_state_) * dt + sqrt_dt * normal_dist_(generator_);
+        gust.x() = b0_u * u_state_;
       }
-      const double gain = sigma_abs * std::sqrt(std::max(0.0, 1.0 - alpha * alpha));
-      state_[i] = alpha * state_[i] + gain * normal_dist_(generator_);
+      else
+      {
+        // 无有效湍流时仅进行指数衰减
+        if (Lu > 1e-6)
+        {
+          const double a_u = V / Lu;
+          u_state_ += (-a_u * u_state_) * dt;
+        }
+        else
+        {
+          u_state_ = 0.0;
+        }
+        gust.x() = 0.0;
+      }
     }
 
-    return state_;
+    // v 轴（二阶）： G_v(s) = σ_v * sqrt(3 V / L_v) * (s + V/(√3 L_v)) / (s + V/L_v)^2
+    {
+      const double Lv = length_scale_[1];
+      const double sigma_v = std::fabs(sigma[1]);
+
+      double &x1 = v_state_[0];
+      double &x2 = v_state_[1];
+
+      if (sigma_v > 1e-6 && Lv > 1e-6)
+      {
+        const double a_v = V / Lv;
+        const double z_v = V / (std::sqrt(3.0) * Lv);
+        const double b0_v = sigma_v * std::sqrt(3.0 * V / Lv);
+
+        const double dx1 = x2;
+        const double dx2 = -a_v * a_v * x1 - 2.0 * a_v * x2;
+
+        x1 += dx1 * dt;
+        x2 += dx2 * dt + sqrt_dt * normal_dist_(generator_);
+
+        gust.y() = b0_v * (z_v * x1 + x2);
+      }
+      else
+      {
+        if (Lv > 1e-6)
+        {
+          const double a_v = V / Lv;
+          const double dx1 = x2;
+          const double dx2 = -a_v * a_v * x1 - 2.0 * a_v * x2;
+          x1 += dx1 * dt;
+          x2 += dx2 * dt;
+        }
+        else
+        {
+          x1 = 0.0;
+          x2 = 0.0;
+        }
+        gust.y() = 0.0;
+      }
+    }
+
+    // w 轴（二阶）： G_w(s) = σ_w * sqrt(3 V / L_w) * (s + V/(√3 L_w)) / (s + V/L_w)^2
+    {
+      const double Lw = length_scale_[2];
+      const double sigma_w = std::fabs(sigma[2]);
+
+      double &x1 = w_state_[0];
+      double &x2 = w_state_[1];
+
+      if (sigma_w > 1e-6 && Lw > 1e-6)
+      {
+        const double a_w = V / Lw;
+        const double z_w = V / (std::sqrt(3.0) * Lw);
+        const double b0_w = sigma_w * std::sqrt(3.0 * V / Lw);
+
+        const double dx1 = x2;
+        const double dx2 = -a_w * a_w * x1 - 2.0 * a_w * x2;
+
+        x1 += dx1 * dt;
+        x2 += dx2 * dt + sqrt_dt * normal_dist_(generator_);
+
+        gust.z() = b0_w * (z_w * x1 + x2);
+      }
+      else
+      {
+        if (Lw > 1e-6)
+        {
+          const double a_w = V / Lw;
+          const double dx1 = x2;
+          const double dx2 = -a_w * a_w * x1 - 2.0 * a_w * x2;
+          x1 += dx1 * dt;
+          x2 += dx2 * dt;
+        }
+        else
+        {
+          x1 = 0.0;
+          x2 = 0.0;
+        }
+        gust.z() = 0.0;
+      }
+    }
+
+    // 保存最近一次输出，便于 dt<=0 时复用
+    state_ = gust;
+    return gust;
   }
 
 private:
   DrydenWindConfig config_;
-  mutable Eigen::Vector3d state_{Eigen::Vector3d::Zero()};
   mutable double last_time_;
   mutable std::mt19937 generator_;
   mutable std::normal_distribution<double> normal_dist_;
-  double base_bandwidth_{1.0};
+  double airspeed_{1.0};
   double length_scale_[3];
+  // Dryden 滤波器状态：u 轴一阶，v/w 轴二阶
+  mutable Eigen::Vector3d state_{Eigen::Vector3d::Zero()};
+  mutable double u_state_{0.0};
+  mutable Eigen::Vector2d v_state_{Eigen::Vector2d::Zero()};
+  mutable Eigen::Vector2d w_state_{Eigen::Vector2d::Zero()};
 };
 
 class CompositeWindField : public WindFieldBase

@@ -195,6 +195,7 @@ CSV_FIELDS = [
     "fq_est_y",
     "fq_est_z",
 ]
+WIND_FIELDS = ["wind_x", "wind_y", "wind_z"]
 
 PLOT_LAYOUT = [
     ("Load Force X", ("fl_true", 0), ("fl_est", 0)),
@@ -211,9 +212,11 @@ def load_samples(csv_path: str) -> List[Dict[str, Sequence[float]]]:
     samples: List[Dict[str, Sequence[float]]] = []
     with open(csv_path, newline="") as csv_file:
         reader = csv.DictReader(csv_file)
-        missing = set(CSV_FIELDS) - set(reader.fieldnames or [])
+        fieldnames = reader.fieldnames or []
+        missing = set(CSV_FIELDS) - set(fieldnames)
         if missing:
             raise RuntimeError(f"CSV file {csv_path} is missing columns: {sorted(missing)}")
+        has_wind = all(field in fieldnames for field in WIND_FIELDS)
         for row in reader:
             sample = {
                 "time": float(row["time"]),
@@ -238,6 +241,12 @@ def load_samples(csv_path: str) -> List[Dict[str, Sequence[float]]]:
                     float(row["fq_est_z"]),
                 ],
             }
+            if has_wind:
+                sample["wind"] = [
+                    float(row["wind_x"]),
+                    float(row["wind_y"]),
+                    float(row["wind_z"]),
+                ]
             samples.append(sample)
     return samples
 
@@ -280,6 +289,7 @@ def _ensure_matplotlib() -> None:
 def render_force_plot(
     samples: Sequence[Dict[str, Sequence[float]]],
     output_path: Optional[str] = None,
+    total_output_path: Optional[str] = None,
     show: bool = False,
     rmse: Optional[Dict[str, Dict[str, np.ndarray]]] = None,
     title: str = "External Force Comparison",
@@ -335,9 +345,79 @@ def render_force_plot(
 
     fig.tight_layout(rect=[0, 0.04, 1, 0.96])
 
+    total_fig = None
+    if total_output_path:
+        total_fig, total_axes = plt.subplots(1, 2, figsize=(14, 5), sharex=True)
+        total_axes = np.atleast_1d(total_axes).flatten()
+        total_pairs = [
+            ("Total Load Force", "fl_true", "fl_est"),
+            ("Total Quad Force", "fq_true", "fq_est"),
+        ]
+        for axis, (label, true_key, est_key) in zip(total_axes, total_pairs):
+            true_total = np.linalg.norm(data_cache[true_key], axis=1)
+            est_total = np.linalg.norm(data_cache[est_key], axis=1)
+            axis.plot(times, true_total, label="True", color="#1f77b4", linewidth=1.5)
+            axis.plot(
+                times,
+                est_total,
+                label="Estimated",
+                color="#ff7f0e",
+                linewidth=1.2,
+                linestyle="--",
+            )
+            axis.set_title(label)
+            axis.set_ylabel("Force [N]")
+            axis.set_xlabel("Time [s]")
+            axis.legend(loc="upper right")
+            axis.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+        total_fig.suptitle(title, fontsize=16)
+        total_fig.tight_layout(rect=[0, 0.04, 1, 0.96])
+
     if output_path:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    if total_output_path and total_fig is not None:
+        os.makedirs(os.path.dirname(total_output_path) or ".", exist_ok=True)
+        total_fig.savefig(total_output_path, dpi=200, bbox_inches="tight")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+        if total_fig is not None:
+            plt.close(total_fig)
+
+
+def render_wind_velocity_plot(
+    samples: Sequence[Dict[str, Sequence[float]]],
+    output_path: str,
+    show: bool = False,
+    title: str = "Wind Field Velocity Components",
+) -> None:
+    """Render a single-axis plot for XYZ wind velocity components."""
+    _ensure_matplotlib()
+    if not samples:
+        raise ValueError("No samples provided for plotting.")
+    if not all("wind" in sample for sample in samples):
+        raise ValueError("Wind data missing in samples; cannot render plot.")
+
+    base_time = samples[0]["time"]
+    times = np.array([s["time"] - base_time for s in samples], dtype=float)
+    wind_data = np.array([s["wind"] for s in samples], dtype=float)
+
+    fig, axis = plt.subplots(figsize=(12, 5))
+    labels = [("X Axis", "#1f77b4"), ("Y Axis", "#2ca02c"), ("Z Axis", "#d62728")]
+    for idx, (label, color) in enumerate(labels):
+        axis.plot(times, wind_data[:, idx], label=label, color=color, linewidth=1.5)
+    axis.set_xlabel("Time [s]")
+    axis.set_ylabel("Velocity [m/s]")
+    axis.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    axis.legend(loc="upper right")
+    fig.suptitle(title, fontsize=16)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
 
     if show:
         plt.show()
@@ -354,7 +434,19 @@ def main() -> None:
         help="Output PNG path (default: same directory as CSV with .png extension).",
         default=None,
     )
-    parser.add_argument("--show", action="store_true", help="Display the figure interactively.")
+    parser.add_argument(
+        "--total-output",
+        help="Optional PNG path for total force comparison (default: base name with _totals suffix).",
+    )
+    parser.add_argument(
+        "--wind-output",
+        help="Optional PNG path for wind velocity components (auto-detected if CSV includes wind data).",
+    )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Display the figure interactively.",
+    )
     args = parser.parse_args()
 
     samples = load_samples(args.csv)
@@ -364,12 +456,37 @@ def main() -> None:
     rmse = compute_rmse(samples)
 
     output_path = args.output
+    base, _ = os.path.splitext(args.csv)
     if output_path is None:
-        base, _ = os.path.splitext(args.csv)
         output_path = base + ".png"
+    total_output = args.total_output
+    if total_output is None:
+        total_output = base + "_totals.png"
 
-    render_force_plot(samples, output_path=output_path, show=args.show, rmse=rmse)
+    render_force_plot(
+        samples,
+        output_path=output_path,
+        total_output_path=total_output,
+        show=args.show,
+        rmse=rmse,
+    )
     print(f"Saved plot to {output_path}")
+    print(f"Saved totals plot to {total_output}")
+
+    wind_samples = [s for s in samples if "wind" in s]
+    have_wind = len(wind_samples) > 0
+    wind_output = args.wind_output
+    if have_wind:
+        if wind_output is None:
+            wind_output = base + "_wind.png"
+        render_wind_velocity_plot(
+            wind_samples,
+            output_path=wind_output,
+            show=args.show,
+        )
+        print(f"Saved wind plot to {wind_output}")
+    elif wind_output:
+        print("Wind output path provided but no wind data is available in the CSV.")
     print(
         "RMSE summary: "
         f"Load total={rmse['fl']['total'][0]:.3f} "
