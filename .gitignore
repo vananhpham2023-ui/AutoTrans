@@ -4,6 +4,7 @@ CMakeFiles
 cmake_install.cmake
 quadrotor_payload_mpc_with_ext_force_codegen
 *.pyc
+controller/payload_mpc_controller/plots/pinn_dataset/pinn_dataset_train.csv
 controller/payload_mpc_controller/analytic_xy.csv
 controller/payload_mpc_controller/force_comparison.csv
 controller/payload_mpc_controller/plots/batch_checkpoint.json

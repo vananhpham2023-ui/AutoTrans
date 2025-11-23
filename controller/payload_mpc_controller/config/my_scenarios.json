@@ -1,0 +1,16 @@
+{
+  "scenarios": [
+    {
+      "name": "figure_eight_gradual",
+      "args": {
+        "trajectory_mode": "figure_eight",
+        "figure_radius": 3.0,
+        "figure_omega": 0.8,
+        "wind_type": "gust_event",
+        "wind_dryden_sigma": [3.256, 3.256, 2.31],
+        "wind_dryden_length_scale": [420.0, 420.0, 300.0],
+        "wind_override_yaml": "{gust_event: {axis: [1.0,1.0,0.0], magnitude: 9.0, start_time: 5.0, hold_duration: 1.0, rise_time: 32.0, fall_time: 32.0, multi_stage: false}}"
+      }
+    }
+  ]
+}

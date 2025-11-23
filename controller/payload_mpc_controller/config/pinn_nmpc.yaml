@@ -5,7 +5,7 @@ use_fix_yaw: false   # using fix yaw.
 # Reference generation configuration (Stage 1 defaults keep planner enabled)
 reference:
     use_planner: true
-    mode: circle  # circle | figure_eight | helix
+    mode: figure_eight  # circle | figure_eight | helix
     circle:
         radius: 5.0               # [m] radius of the circle
         angular_velocity: 0.5     # [rad/s] positive for CCW

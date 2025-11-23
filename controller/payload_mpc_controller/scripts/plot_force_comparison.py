@@ -12,6 +12,7 @@ from datetime import timedelta, tzinfo
 from typing import Dict, Iterable, List, Optional, Sequence
 
 import numpy as np
+from matplotlib.ticker import AutoMinorLocator
 
 
 def _install_dateutil_stub() -> None:
@@ -163,8 +164,9 @@ def _load_matplotlib():
         else:
             raise
 
-    if not os.environ.get("DISPLAY"):  # pragma: no cover - headless path
-        matplotlib.use("Agg")
+    # 强制使用非交互式后端Agg，确保在非主线程中也能正常工作
+    # 即使有DISPLAY环境变量，也使用Agg后端以避免GUI线程问题
+    matplotlib.use("Agg", force=True)
     import matplotlib.pyplot as plt  # type: ignore
 
     return matplotlib, plt
@@ -196,6 +198,9 @@ CSV_FIELDS = [
     "fq_est_z",
 ]
 WIND_FIELDS = ["wind_x", "wind_y", "wind_z"]
+ERROR_COLOR = "#d62728"
+SUBPLOT_W = 5.0
+SUBPLOT_H = 4.0
 
 PLOT_LAYOUT = [
     ("Load Force X", ("fl_true", 0), ("fl_est", 0)),
@@ -388,6 +393,97 @@ def render_force_plot(
             plt.close(total_fig)
 
 
+def render_force_error_plot(
+    samples: Sequence[Dict[str, Sequence[float]]],
+    output_path: Optional[str] = None,
+    total_output_path: Optional[str] = None,
+    show: bool = False,
+    title: str = "External Force Estimation Errors",
+) -> None:
+    """Render force estimation error plots for load and quad components."""
+    _ensure_matplotlib()
+    if not samples:
+        raise ValueError("No samples provided for plotting.")
+
+    base_time = samples[0]["time"]
+    times = np.array([s["time"] - base_time for s in samples], dtype=float)
+
+    data_cache: Dict[str, np.ndarray] = {}
+    for key in ("fl_true", "fl_est", "fq_true", "fq_est"):
+        data_cache[key] = np.array([s[key] for s in samples], dtype=float)
+
+    error_cache = {
+        "fl": data_cache["fl_est"] - data_cache["fl_true"],
+        "fq": data_cache["fq_est"] - data_cache["fq_true"],
+    }
+
+    error_layout = [
+        ("Load Force Error X", ("fl", 0)),
+        ("Load Force Error Y", ("fl", 1)),
+        ("Load Force Error Z", ("fl", 2)),
+        ("Quad Force Error X", ("fq", 0)),
+        ("Quad Force Error Y", ("fq", 1)),
+        ("Quad Force Error Z", ("fq", 2)),
+    ]
+
+    fig_width = SUBPLOT_W * 3
+    fig_height = SUBPLOT_H * 2
+    fig, axes = plt.subplots(2, 3, figsize=(fig_width, fig_height), sharex=True)
+    axes = axes.flatten()
+    max_time = times[-1] if len(times) else 1.0
+    ticks = np.linspace(0.0, max_time, num=5)
+    for axis, (label, (err_key, idx)) in zip(axes, error_layout):
+        axis.plot(times, error_cache[err_key][:, idx], color=ERROR_COLOR, linewidth=1.4)
+        axis.axhline(0.0, color="#888888", linewidth=0.8, linestyle="--")
+        axis.set_ylabel("Force Error [N]")
+        axis.set_title(label)
+        axis.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+        axis.set_xlim(0.0, max_time)
+        axis.set_xticks(ticks)
+        axis.xaxis.set_minor_locator(AutoMinorLocator(n=2))
+    axes[-1].set_xlabel("Time [s]")
+    axes[-2].set_xlabel("Time [s]")
+    axes[-3].set_xlabel("Time [s]")
+    fig.suptitle(title, fontsize=16)
+    fig.tight_layout(rect=[0.02, 0.04, 0.98, 0.96])
+
+    if output_path:
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        fig.savefig(output_path, dpi=200, bbox_inches="tight")
+
+    total_fig = None
+    if total_output_path:
+        total_fig, total_axes = plt.subplots(1, 2, figsize=(SUBPLOT_W * 2, SUBPLOT_H), sharex=True)
+        total_axes = np.atleast_1d(total_axes).flatten()
+        load_total_error = np.linalg.norm(error_cache["fl"], axis=1)
+        quad_total_error = np.linalg.norm(error_cache["fq"], axis=1)
+        total_pairs = [
+            ("Load Total Force Error", load_total_error),
+            ("Quad Total Force Error", quad_total_error),
+        ]
+        for axis, (label, values) in zip(total_axes, total_pairs):
+            axis.plot(times, values, color=ERROR_COLOR, linewidth=1.4)
+            axis.set_ylabel("Force Error [N]")
+            axis.set_xlabel("Time [s]")
+            axis.set_title(label)
+            axis.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+            axis.set_xlim(0.0, max_time)
+            axis.set_xticks(ticks)
+            axis.xaxis.set_minor_locator(AutoMinorLocator(n=2))
+        total_fig.suptitle(title, fontsize=16)
+        total_fig.tight_layout(rect=[0.02, 0.05, 0.98, 0.95])
+        if total_output_path:
+            os.makedirs(os.path.dirname(total_output_path) or ".", exist_ok=True)
+            total_fig.savefig(total_output_path, dpi=200, bbox_inches="tight")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+        if total_fig is not None:
+            plt.close(total_fig)
+
+
 def render_wind_velocity_plot(
     samples: Sequence[Dict[str, Sequence[float]]],
     output_path: str,
@@ -439,6 +535,14 @@ def main() -> None:
         help="Optional PNG path for total force comparison (default: base name with _totals suffix).",
     )
     parser.add_argument(
+        "--error-output",
+        help="Optional PNG path for per-axis force error plot (default: base name with _errors suffix).",
+    )
+    parser.add_argument(
+        "--error-total-output",
+        help="Optional PNG path for total force error plot (default: base name with _errors_totals suffix).",
+    )
+    parser.add_argument(
         "--wind-output",
         help="Optional PNG path for wind velocity components (auto-detected if CSV includes wind data).",
     )
@@ -462,6 +566,12 @@ def main() -> None:
     total_output = args.total_output
     if total_output is None:
         total_output = base + "_totals.png"
+    error_output = args.error_output
+    if error_output is None:
+        error_output = base + "_errors.png"
+    error_total_output = args.error_total_output
+    if error_total_output is None:
+        error_total_output = base + "_errors_totals.png"
 
     render_force_plot(
         samples,
@@ -472,6 +582,15 @@ def main() -> None:
     )
     print(f"Saved plot to {output_path}")
     print(f"Saved totals plot to {total_output}")
+
+    render_force_error_plot(
+        samples,
+        output_path=error_output,
+        total_output_path=error_total_output,
+        show=args.show,
+    )
+    print(f"Saved error plot to {error_output}")
+    print(f"Saved total error plot to {error_total_output}")
 
     wind_samples = [s for s in samples if "wind" in s]
     have_wind = len(wind_samples) > 0

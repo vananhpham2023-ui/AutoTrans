@@ -15,6 +15,7 @@
 #include "reference_generator.h"
 #include <ros/ros.h>
 #include <memory>
+#include <exception>
 
 std::unique_ptr<PayloadMPC::MPCFSM> fsm_ptr;
 void MPC_controller_main(const ros::TimerEvent &)
@@ -59,64 +60,66 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "MPCctrl");
     ros::NodeHandle nh("~");
 
-    PayloadMPC::MpcParams param;
-    param.config_from_ros_handle(nh);
+    try
+    {
+        PayloadMPC::MpcParams param;
+        param.config_from_ros_handle(nh);
 
-    PayloadMPC::MpcController controller(param);
-    fsm_ptr.reset(new PayloadMPC::MPCFSM(nh, param, controller));
+        PayloadMPC::MpcController controller(param);
+        fsm_ptr.reset(new PayloadMPC::MPCFSM(nh, param, controller));
 
     // 创建一个对 `fsm_ptr` 所指向的 `PayloadMPC::MPCFSM` 对象的引用 `fsm`。
     // 后续代码可以通过这个引用 `fsm` 方便地访问和操作 `PayloadMPC::MPCFSM` 对象的成员，
     // 避免每次都通过解引用 `fsm_ptr` 来操作对象，提高代码的可读性和简洁性。
-    PayloadMPC::MPCFSM &fsm = *fsm_ptr;
+        PayloadMPC::MPCFSM &fsm = *fsm_ptr;
 
-    const PayloadMPC::MpcParams::ReferenceConfig &ref_cfg = param.reference_config();
-    const bool use_planner = ref_cfg.use_planner;
-    if (!use_planner)
-    {
-        std::unique_ptr<PayloadMPC::AnalyticTrajectory> analytic_traj;
-        if (ref_cfg.mode == "circle")
+        const PayloadMPC::MpcParams::ReferenceConfig &ref_cfg = param.reference_config();
+        const bool use_planner = ref_cfg.use_planner;
+        if (!use_planner)
         {
-            analytic_traj = std::make_unique<PayloadMPC::CircleTrajectory>(ref_cfg.circle.radius,
-                                                                           ref_cfg.circle.angular_velocity,
-                                                                           ref_cfg.circle.center,
-                                                                           ref_cfg.circle.altitude);
-        }
-        else if (ref_cfg.mode == "figure_eight")
-        {
-            analytic_traj = std::make_unique<PayloadMPC::FigureEightTrajectory>(ref_cfg.figure_eight.radius,
-                                                                                ref_cfg.figure_eight.angular_velocity,
-                                                                                ref_cfg.figure_eight.center,
-                                                                                ref_cfg.figure_eight.altitude);
-        }
-        else if (ref_cfg.mode == "helix")
-        {
-            analytic_traj = std::make_unique<PayloadMPC::HelixTrajectory>(ref_cfg.helix.radius,
-                                                                          ref_cfg.helix.angular_velocity,
-                                                                          ref_cfg.helix.center,
-                                                                          ref_cfg.helix.base_altitude,
-                                                                          ref_cfg.helix.vertical_rate,
-                                                                          ref_cfg.helix.revolutions);
+            std::unique_ptr<PayloadMPC::AnalyticTrajectory> analytic_traj;
+            if (ref_cfg.mode == "circle")
+            {
+                analytic_traj = std::make_unique<PayloadMPC::CircleTrajectory>(ref_cfg.circle.radius,
+                                                                               ref_cfg.circle.angular_velocity,
+                                                                               ref_cfg.circle.center,
+                                                                               ref_cfg.circle.altitude);
+            }
+            else if (ref_cfg.mode == "figure_eight")
+            {
+                analytic_traj = std::make_unique<PayloadMPC::FigureEightTrajectory>(ref_cfg.figure_eight.radius,
+                                                                                    ref_cfg.figure_eight.angular_velocity,
+                                                                                    ref_cfg.figure_eight.center,
+                                                                                    ref_cfg.figure_eight.altitude);
+            }
+            else if (ref_cfg.mode == "helix")
+            {
+                analytic_traj = std::make_unique<PayloadMPC::HelixTrajectory>(ref_cfg.helix.radius,
+                                                                              ref_cfg.helix.angular_velocity,
+                                                                              ref_cfg.helix.center,
+                                                                              ref_cfg.helix.base_altitude,
+                                                                              ref_cfg.helix.vertical_rate,
+                                                                              ref_cfg.helix.revolutions);
+            }
+            else
+            {
+                ROS_ERROR_STREAM("[MPCctrl] Unknown analytic trajectory mode: " << ref_cfg.mode);
+            }
+
+            if (analytic_traj)
+            {
+                ROS_INFO_STREAM("[MPCctrl] Using analytic trajectory mode: " << ref_cfg.mode);
+                fsm.setAnalyticTrajectory(std::move(analytic_traj));
+            }
+            else
+            {
+                ROS_WARN("[MPCctrl] Analytic trajectory not configured. Falling back to hover.");
+            }
         }
         else
         {
-            ROS_ERROR_STREAM("[MPCctrl] Unknown analytic trajectory mode: " << ref_cfg.mode);
+            ROS_INFO("[MPCctrl] Planner mode enabled. Waiting for polynomial trajectories.");
         }
-
-        if (analytic_traj)
-        {
-            ROS_INFO_STREAM("[MPCctrl] Using analytic trajectory mode: " << ref_cfg.mode);
-            fsm.setAnalyticTrajectory(std::move(analytic_traj));
-        }
-        else
-        {
-            ROS_WARN("[MPCctrl] Analytic trajectory not configured. Falling back to hover.");
-        }
-    }
-    else
-    {
-        ROS_INFO("[MPCctrl] Planner mode enabled. Waiting for polynomial trajectories.");
-    }
     
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>("/mavros/state",
                                                                  10,
@@ -286,6 +289,17 @@ int main(int argc, char **argv)
     // 我们并不依赖反馈作为触发条件，因为通过我们的测试，（使用反馈）并没有显著的性能差异。
 
     ros::spin();
+    }
+    catch (const std::exception &ex)
+    {
+        ROS_FATAL("[MPCctrl] Unhandled exception: %s", ex.what());
+        return 1;
+    }
+    catch (...)
+    {
+        ROS_FATAL("[MPCctrl] Unhandled unknown exception.");
+        return 1;
+    }
 
     return 0;
 }

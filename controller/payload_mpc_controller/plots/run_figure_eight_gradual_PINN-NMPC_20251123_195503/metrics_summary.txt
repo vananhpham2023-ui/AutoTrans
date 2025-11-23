@@ -1,0 +1,14 @@
+[Load Force RMSE]
+X [N]: nan
+Y [N]: nan
+Z [N]: nan
+
+[Quad Force RMSE]
+X [N]: nan
+Y [N]: nan
+Z [N]: nan
+
+[Total Force RMSE]
+Load total [N]: nan
+Quad total [N]: nan
+

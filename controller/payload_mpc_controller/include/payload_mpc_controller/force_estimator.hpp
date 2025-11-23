@@ -13,12 +13,13 @@
 #include <float.h>
 #include "Eigen/Eigen"
 #include "mpc_params.h"
+#include "base_force_estimator.hpp"
 #include <math.h>
 #include "lowpassfilter2p.h"
 namespace PayloadMPC
 {
 
-  class ForceEstimator
+  class ForceEstimator : public BaseForceEstimator
   {
   private:
     Eigen::Vector3d quad_acc_;
@@ -51,7 +52,7 @@ namespace PayloadMPC
      * @param params 包含所有必要参数的MPC参数结构体
      * @note 必须在使用其他方法前调用此方法进行初始化
      */
-    void init(MpcParams &params)
+    void init(MpcParams &params) override
     {
       mass_quad_ = params.dyn_params_.mass_q;
       mass_load_ = params.dyn_params_.mass_l;
@@ -82,13 +83,13 @@ namespace PayloadMPC
      * @brief 启用力估计器
      * @post 后续调用caculate_force()时将计算实际力值
      */
-    void enableForceEstimator() { use_force_estimator_ = true; }
+    void enableForceEstimator() override { use_force_estimator_ = true; }
     
     /**
      * @brief 禁用力估计器
      * @post 后续调用caculate_force()时将返回零力
      */
-    void disableForceEstimator()  {  use_force_estimator_ = false;  }
+    void disableForceEstimator() override  {  use_force_estimator_ = false;  }
 
     /**
      * @brief 设置系统当前状态
@@ -102,7 +103,7 @@ namespace PayloadMPC
      */
     void setSystemState(const Eigen::Vector3d &quad_acc_body, const Eigen::Quaterniond &Rotwb, 
                        const Eigen::Vector3d &load_acc_body, const Eigen::Quaterniond &load_Rotwb, 
-                       const Eigen::Vector3d cable, const Eigen::Vector4d &Rpm)
+                       const Eigen::Vector3d cable, const Eigen::Vector4d &Rpm) override
     {
 
       quad_acc_ = Rotwb * quad_acc_body;
@@ -129,7 +130,7 @@ namespace PayloadMPC
      * @note 如果力估计器未启用，将返回零向量
      * @see enableForceEstimator(), disableForceEstimator()
      */
-    void caculate_force(Eigen::Vector3d &fl, Eigen::Vector3d &fq)
+    void caculate_force(Eigen::Vector3d &fl, Eigen::Vector3d &fq) override
     {
       if (use_force_estimator_)
       {
@@ -172,6 +173,8 @@ namespace PayloadMPC
         fq = Eigen::Vector3d::Zero();
       }
     }
+
+    bool isOperational() const override { return use_force_estimator_; }
   };
 
 } // namespace PayloadMPC

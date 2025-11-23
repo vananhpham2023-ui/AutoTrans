@@ -1,0 +1,145 @@
+#场景分类：水平风、上斜风、下斜风；figure_eight型轨迹；重度湍流
+
+#水平风 horizontal_diagonal
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[6.36,6.36,0.0]' wind_dryden_sigma:='[3.256,3.256,2.31]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+
+#上斜风 ascending_oblique
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,5.2,5.2]' wind_dryden_sigma:='[3.256,3.256,2.31]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+
+#下斜风 descending_oblique
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,-5.2,-5.2]' wind_dryden_sigma:='[3.256,3.256,2.31]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+
+#渐变风（入口/开阔区过渡） gradual_valley_entry
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[3.0,3.0,0.0]' wind_dryden_sigma:='[3.256,3.256,2.31]' wind_dryden_length_scale:='[420.0,420.0,300.0]' wind_gradual_enabled:=true wind_gradual_cycle_profile_enabled:=true wind_gradual_ramp_up_time:=0.004 wind_gradual_ramp_down_time:=0.004 wind_window_enabled:=true wind_window_auto_from_cycle:=true wind_window_skip_cycles:=1 wind_window_active_cycles:=8
+
+#阵风（参考原有 gust_event，可选叠加到 composite ）
+#示例：水平阵风（方波/正弦均可）
+# rosparam set /so3_quadrotor/wind/gust_event/axis "[1.0,0.0,0.0]"
+# rosparam set /so3_quadrotor/wind/gust_event/magnitude 5.0
+# rosparam set /so3_quadrotor/wind/gust_event/start_time 15.0
+创建一个自动化仿真与结果可视化脚本，实现以下功能：
+1. 运行controller_only.launch文件两次：
+   - 第一次运行使用mpc.yaml参数配置A（命名为PINN-NMPC方案）
+   - 第二次运行使用修改后的mpc.yaml参数配置B（命名为LBFGS-NMPC方案）
+   - 脚本需支持灵活设置mpc.yaml参数和风场参数
+2. 仿真结果可视化要求：
+   在单次仿真输出图像基础上，额外生成以下三类对比图像：
+   ① 宏观性能对比图：
+   - 图表类型：柱状图
+   - 数据指标：均方根误差(RMSE)
+   - 横轴：不同场景（如不同风况）
+   - 纵轴：RMSE值
+   - 数据系列：每组包含两根柱子，分别代表PINN-NMPC方案和LBFGS-NMPC方案
+   - 图表目的：证明整体性能优越性
+   ② 动态性能对比图：
+   - 图表类型：时序折线图
+   - 数据指标：跟踪误差随时间的变化
+   - 横轴：时间
+   - 纵轴：误差值（理想值为0）
+   - 子图组成：
+     * 无人机性能：xyz轴位置跟踪和速度跟踪对比图（6个子图）、xyz轴位置误差和速度误差（6个子图）
+     * 载荷性能：xyz轴位置跟踪和速度跟踪对比图（6个子图）、xyz轴位置误差和速度误差（6个子图）
+     * 力估计性能：总力估计误差（fq和fl两个子图）
+   - 数据系列：每个子图包含两条曲线，分别代表PINN-NMPC和LBFGS-NMPC方案
+   - 图表目的：展示瞬态响应优势
+脚本需确保两次仿真的参数配置正确应用，并能自动提取、处理和可视化所需数据，生成符合上述规范的对比图像。
+
+渐变 vs 阵风记录：
+- 渐变风（独立风场）：`wind_type:=gradual`，使用 wind_gradual_* 和 wind_window_* 控制，从 0 爬升至 wind_constant_velocity 设定值，再按窗口/边沿回落，整个风场独立输出，不叠加其他组件。
+- 阵风（独立风场）：`wind_type:=gust_event`，使用 gust_event_* 控制，在 rise/hold/fall 期间给出确定性增量，输出独立阵风（不含常值/Dryden）。
+
+# 独立 gust_event 风场（确定性阵风，不叠加其他风分量）
+# 关键参数（通过 wind_override_yaml 传入 gust_event 块）：
+#   axis:   阵风方向（仅 XY 有效），如 [1,0,0]
+#   magnitude: 阵风幅值 (m/s)
+#   start_time: 阵风开始时间（秒）
+#   hold_duration: 全幅保持时长（秒）
+#   rise_time / fall_time: 上升/下降沿时长（秒）
+# 示例：10s 触发，持续 5s，全程水平方向 5 m/s，4ms 上升/下降
+roslaunch payload_planner controller_only.launch \
+  trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+  wind_type:=gust_event \
+  wind_override_yaml:="{gust_event: {axis: [1.0,0.0,0.0], magnitude: 5.0, start_time: 10.0, hold_duration: 5.0, rise_time: 2, fall_time: 2}}" \
+  wind_dryden_sigma:='[3.256,3.256,2.31]'  wind_dryden_length_scale:='[420.0,420.0,300.0]'
+# 模板（满足“10 周期”逻辑，窗口关-开-关，Dryden 与 gust_event 同步门控，figure_omega=0.8 时 T≈7.85398s）：
+roslaunch payload_planner controller_only.launch \
+  trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+  wind_type:=gust_event \
+  wind_override_yaml:="{gust_event: {axis: [1.0,0.0,0.0], magnitude: 5.0, start_time: 7.85398, hold_duration: 62.83184, rise_time: 5, fall_time: 5}}" \
+  wind_window_enabled:=true wind_window_auto_from_cycle:=true wind_window_skip_cycles:=1 wind_window_active_cycles:=8 \
+  wind_dryden_sigma:='[3.256,3.256,2.31]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+# 独立 gradual 风场（按窗口/周期硬开关 + 极短上/下沿；无湍流/阵风成分）
+# 关键参数：
+#   wind_constant_velocity: 目标风速（XYZ 全量向量）
+#   wind_window_*: 定义风场整体开窗（可 auto_from_cycle 与轨迹周期对齐）
+#   wind_gradual_cycle_profile_enabled: true 时使用极短 ramp（与窗口边界对齐）
+#   wind_gradual_ramp_up_time / ramp_down_time: 上升/下降沿（秒，建议 <=0.004）
+# 示例：第1周期无风，2上升，3-8全幅，9下降，10无风（figure_omega=0.8）
+roslaunch payload_planner controller_only.launch \
+  trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+  wind_type:=gradual wind_constant_velocity:='[3.0,3.0,0.0]' \
+  wind_window_enabled:=true wind_window_auto_from_cycle:=true wind_window_skip_cycles:=1 wind_window_active_cycles:=8 \
+  wind_gradual_cycle_profile_enabled:=true wind_gradual_ramp_up_time:=20 wind_gradual_ramp_down_time:=20 \
+  wind_dryden_sigma:='[3.256,3.256,2.31]' \
+  wind_dryden_length_scale:='[420.0,420.0,300.0]'
+
+# =========================
+# my_scenarios.json 模板示例
+# 文件：src/AutoTrans/controller/payload_mpc_controller/config/my_scenarios.json
+# 将以下条目追加到 "scenarios" 数组中使用。
+
+# 1) gust_event 独立风场 + Dryden 三轴湍流
+#  - 轨迹：figure_eight，radius=3.0，omega=0.8
+#  - 风场：Dryden（三轴） + 多阶段确定性阵风
+#    * 阶段1：t=8s 开始，1s 线性上升至 magnitude1=1.0、axis1=[1,1,0]，稳定 20s
+#    * 阶段2：从阶段1稳定末尾起，1s 线性过渡至 magnitude2=1.5、axis2=[1,1,0]，稳定 20s
+#    * 阶段3：1s 线性过渡回 magnitude1=1.0、axis1=[1,1,0]，再稳定 20s
+#    * 阶段4：1s 线性减弱至 0，回到无阵风状态
+    {
+      "name": "figure_eight_gust_event",
+      "args": {
+        "trajectory_mode": "figure_eight",
+        "figure_radius": 3.0,
+        "figure_omega": 0.8,
+        "wind_type": "gust_event",
+        "wind_dryden_sigma": [3.256, 3.256, 2.31],
+        "wind_dryden_length_scale": [420.0, 420.0, 300.0],
+        "wind_override_yaml": "{gust_event: {axis: [1.0,1.0,0.0], magnitude: 5, start_time: 8.0, hold_duration: 20.0, rise_time: 0.013, fall_time: 0.013, axis2: [1.0,1.0,0.0], magnitude2: 10, hold_duration2: 20.0, rise_time2: 0.013, fall_time2: 0.013, multi_stage: true}}"
+      }
+    }
+
+# 单阶段
+    {
+      "name": "figure_eight_gradual",
+      "args": {
+        "trajectory_mode": "figure_eight",
+        "figure_radius": 3.0,
+        "figure_omega": 0.8,
+        "wind_type": "gust_event",
+        "wind_dryden_sigma": [3.256, 3.256, 2.31],
+        "wind_dryden_length_scale": [420.0, 420.0, 300.0],
+        "wind_override_yaml": "{gust_event: {axis: [1.0,1.0,0.0], magnitude: 9.5, start_time: 5.0, hold_duration: 1.0, rise_time: 30.0, fall_time: 30.0, multi_stage: false}}"
+      }
+    }
+
+
+# 2) gradual 独立风场 + Dryden 三轴湍流（10 周期逻辑：1/10 周期无风，2 上升，3-8 全幅，9 下降）
+{
+  "name": "figure_eight_gradual_cycles",
+  "args": {
+    "trajectory_mode": "figure_eight",
+    "figure_radius": 3.0,
+    "figure_omega": 0.8,
+    "wind_type": "gradual",
+    "wind_constant_velocity": [6.36, 6.36, 0.0],
+    "wind_dryden_sigma": [3.256, 3.256, 2.31],
+    "wind_dryden_length_scale": [420.0, 420.0, 300.0],
+    "wind_window_enabled": true,
+    "wind_window_auto_from_cycle": true,
+    "wind_window_skip_cycles": 1,
+    "wind_window_active_cycles": 8,
+    "wind_gradual_cycle_profile_enabled": true,
+    "wind_gradual_ramp_up_time": 20,
+    "wind_gradual_ramp_down_time": 20
+  }
+}

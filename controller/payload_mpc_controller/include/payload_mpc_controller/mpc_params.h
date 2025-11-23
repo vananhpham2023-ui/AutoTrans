@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <mpc_wrapper.h>
 #include <algorithm>
 #include <cctype>
@@ -51,6 +52,15 @@ namespace PayloadMPC
 			int max_queue;
 			double force_observer_freq;
 			double var_weight;
+		};
+
+		struct PinnForceEstimatorConfig
+		{
+			bool enabled{false};
+			std::string model_path;
+			std::string normalizer_path;
+			double ema_alpha{1.0};
+			int failover_threshold{5};
 		};
 
 		struct filter
@@ -150,6 +160,8 @@ namespace PayloadMPC
 		ReferenceConfig reference_config_;
 
 		ForceEstimator force_estimator_param_;
+		PinnForceEstimatorConfig pinn_force_estimator_param_;
+		std::string force_estimator_type_{"lbfgs"};
 		filter filter_param_;
 
 		real_t gravity_;
@@ -355,6 +367,47 @@ namespace PayloadMPC
 			read_essential_param(nh, "force_estimator/max_queue", force_estimator_param_.max_queue);
 			read_essential_param(nh, "force_estimator/force_observer_freq", force_estimator_param_.force_observer_freq);
 			read_essential_param(nh, "force_estimator/var_weight", force_estimator_param_.var_weight);
+			{
+				std::string type_param = nh.param<std::string>("force_estimator/type", std::string("lbfgs"));
+				std::transform(type_param.begin(), type_param.end(), type_param.begin(),
+							   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+				if (type_param != "pinn")
+				{
+					type_param = "lbfgs";
+				}
+				force_estimator_type_ = type_param;
+
+				ros::NodeHandle pinn_nh(nh, "force_estimator/pinn");
+				const std::string pkg_path = ros::package::getPath("payload_mpc_controller");
+				const std::string default_model_path = pkg_path.empty() ? std::string()
+																		: (pkg_path + "/models/force_estimation_script3.pt");
+				const std::string default_normalizer_path = pkg_path.empty() ? std::string()
+																			 : (pkg_path + "/models/normalizer_stats.json");
+
+				pinn_force_estimator_param_.model_path =
+					pinn_nh.param<std::string>("model_path", default_model_path);
+				pinn_force_estimator_param_.normalizer_path =
+					pinn_nh.param<std::string>("normalizer_path", default_normalizer_path);
+				const double ema_alpha = pinn_nh.param("ema_alpha", 1.0);
+				pinn_force_estimator_param_.ema_alpha = std::clamp(ema_alpha, 0.0, 1.0);
+				const int failover = pinn_nh.param("failover_threshold", 5);
+				pinn_force_estimator_param_.failover_threshold = std::max(1, failover);
+
+				bool pinn_requested = (force_estimator_type_ == "pinn");
+				pinn_requested = pinn_nh.param("enabled", pinn_requested);
+				pinn_force_estimator_param_.enabled = pinn_requested;
+
+				if (pinn_force_estimator_param_.enabled)
+				{
+					if (pinn_force_estimator_param_.model_path.empty() ||
+						pinn_force_estimator_param_.normalizer_path.empty())
+					{
+						ROS_ERROR("[MpcParams] PINN estimator enabled but model_path/normalizer_path missing. Fallback to L-BFGS.");
+						pinn_force_estimator_param_.enabled = false;
+						force_estimator_type_ = "lbfgs";
+					}
+				}
+			}
 
 			read_essential_param(nh, "use_simulation", use_simulation_);
 			read_essential_param(nh, "use_fix_yaw", use_fix_yaw_);

@@ -17,12 +17,16 @@
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/AttitudeTarget.h>
 #include <mavros_msgs/ESCStatus.h>
+#include "base_force_estimator.hpp"
 #include "multi_optimization_based_force_estimator.hpp"
+#include "pinn_force_estimator.hpp"
 #include <visualization_msgs/MarkerArray.h>
 #include <vector>
 #include <limits>
 #include <string>
 #include <memory>
+#include <array>
+#include <geometry_msgs/Vector3Stamped.h>
 
 namespace PayloadMPC
 {
@@ -105,18 +109,25 @@ namespace PayloadMPC
 		ros::Publisher reference_geometry_pub_;
 		ros::Publisher pub_all_ref_data_, pub_rmse_info_;
 		ros::Publisher run_completion_pub_;
+		ros::Publisher run_completion_tagged_pub_;
 		State_t fsm_state; // Should only be changed in PX4CtrlFSM::process() function!
 
 		Exec_Traj_State_t exec_traj_state_;
 		std::unique_ptr<AnalyticTrajectory> analytic_traj_;
 		ros::Time analytic_start_time_;
+		ros::Subscriber wind_sub_;
 
 		// Handles
 		ros::NodeHandle nh_;
 
 		MpcParams &params_;
 		MpcController &controller_;
-		MultiOptForceEstimator force_estimator_;
+		std::string completion_topic_base_;
+		std::string completion_topic_tagged_;
+		std::unique_ptr<BaseForceEstimator> lbfgs_estimator_;
+		std::unique_ptr<BaseForceEstimator> pinn_estimator_;
+		BaseForceEstimator *force_estimator_{nullptr};
+		std::string active_force_estimator_tag_;
 
 		long int rmse_cnt_ = 0;
 		double rmse_sum_ = 0, rmse_payload_sum_ = 0;
@@ -137,9 +148,19 @@ namespace PayloadMPC
 		double analytic_total_duration_;
 		double analytic_next_cycle_time_;
 		bool analytic_rmse_reported_;
+		Eigen::Vector3d wind_velocity_{Eigen::Vector3d::Zero()};
+		Eigen::Vector3d fl_wind_{Eigen::Vector3d::Zero()};
+		Eigen::Vector3d fq_wind_{Eigen::Vector3d::Zero()};
+		double wind_drag_coeff_{0.0};
+		bool wind_force_initialized_{false};
 
 		void setEstimateState(const Odom_Data_t &odom_est_state, const Odom_Data_t &odom_payload_state, const Imu_Data_t &cable_info_data);
 		void setForceEstimation();
+		void initializeForceEstimators();
+		void ensureActiveForceEstimator();
+		void setActiveForceEstimator(BaseForceEstimator *next, const std::string &tag);
+		void windCallback(const geometry_msgs::Vector3Stamped::ConstPtr &msg);
+		void updateWindForce(const Eigen::Vector3d &wind);
 
 		void publishPrediction(const Eigen::Ref<const Eigen::Matrix<real_t, kStateSize, kSamples + 1>> reference_states,
 							   const Eigen::Ref<const Eigen::Matrix<real_t, kStateSize, kSamples + 1>> predicted_traj,
@@ -148,10 +169,24 @@ namespace PayloadMPC
 		void publish_bodyrate_ctrl(const Eigen::Ref<const Eigen::Matrix<real_t, kInputSize, 1>> predicted_input,
 								   const ros::Time &stamp);
 
+			struct AnalyticSeriesSample
+			{
+				ros::Time stamp;
+				std::array<double, 3> quad_ref_pos;
+				std::array<double, 3> quad_actual_pos;
+				std::array<double, 3> payload_ref_pos;
+				std::array<double, 3> payload_actual_pos;
+				std::array<double, 3> quad_ref_vel;
+				std::array<double, 3> quad_actual_vel;
+				std::array<double, 3> payload_ref_vel;
+				std::array<double, 3> payload_actual_vel;
+			};
+
 		std::vector<geometry_msgs::PoseStamped> reference_history_;
 		std::vector<geometry_msgs::PoseStamped> reference_payload_history_;
 		std::vector<geometry_msgs::PoseStamped> actual_history_quad_;
 		std::vector<geometry_msgs::PoseStamped> actual_history_payload_;
+		std::vector<AnalyticSeriesSample> analytic_series_history_;
 		bool analytic_plot_generated_;
 
 		void finalizeAnalyticRun(double quad_rmse, double payload_rmse);

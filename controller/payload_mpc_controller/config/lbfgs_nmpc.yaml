@@ -5,7 +5,7 @@ use_fix_yaw: false   # using fix yaw.
 # Reference generation configuration (Stage 1 defaults keep planner enabled)
 reference:
     use_planner: true
-    mode: circle  # circle | figure_eight | helix
+    mode: figure_eight  # circle | figure_eight | helix
     circle:
         radius: 5.0               # [m] radius of the circle
         angular_velocity: 0.5     # [rad/s] positive for CCW
@@ -25,21 +25,21 @@ reference:
         revolutions: 3.0          # total turns for a finite-length helix
 
 # Cost on states
-Q_pos_xy:   250.0    # Cost for horizontal positon error //default: 200     0.5 
+Q_pos_xy:   247.0    # Cost for horizontal positon error //default: 200     0.5 
 Q_pos_z:  250.0    # Cost for horizontal positon error //default: 200     0.5 
 Q_attitude_rp:  120.0   # Cost for attitude error           //default: 50     0.1
 Q_attitude_yaw:  120.0    # Cost for attitude error           //default: 50     0.1
-Q_velocity:  25.0   # Cost for velocity error           //default: 10    0.05
+Q_velocity:  24.5   # Cost for velocity error           //default: 10    0.05
 
-Q_payload_xy:  20.0
+Q_payload_xy:  19.0
 Q_payload_z: 20.0
 Q_payload_velocity: 3.0
 Q_cable: 0.0
 Q_dcable: 0.0
 
 # Cost on Inputs
-R_thrust:    0.75  # Cost on thrust input            //default: 1
-R_pitchroll:  0.75      # Cost on pitch and roll rate
+R_thrust:    0.65  # Cost on thrust input            //default: 1
+R_pitchroll:  0.70      # Cost on pitch and roll rate
 R_yaw:        0.75      # Cost on yaw ratte
 
 # Exponential scaling: W_i = W * exp(-i/N * cost_scaling).
@@ -97,7 +97,7 @@ force_estimator: # *
     max_force: 10.0                      # 最大允许估计力值(N)
     max_queue: 80                       # 力估计器使用的最大队列长度
     force_observer_freq: 400.0          # 力观测器运行频率(Hz)
-    var_weight: 80.0                    # 方差权重参数，用于力估计器计算
+    var_weight: 85.0                    # 方差权重参数，用于力估计器计算
     pinn:
         model_path: /home/wangshengkai/autotrans_ws/src/AutoTrans/force_estimation_script5.pt
         normalizer_path: /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/models/normalizer_stats.json

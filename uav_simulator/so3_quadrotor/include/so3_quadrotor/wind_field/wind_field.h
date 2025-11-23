@@ -24,6 +24,8 @@ enum class WindFieldType
   None = 0,
   Constant,
   Gust,
+  GustEvent, // deterministic, time-bounded gust
+  Gradual,   // time-bounded ramp of mean wind
   Dryden,
   Composite
 };
@@ -59,12 +61,68 @@ struct DrydenWindConfig
   unsigned int seed{0u};
 };
 
+struct GustEventConfig
+{
+  // Only horizontal axes are used; z is ignored for safety.
+  Eigen::Vector3d axis{Eigen::Vector3d::UnitX()};
+  double magnitude{0.0};      // m/s peak increment (stage 1 & 3 plateau)
+  double start_time{0.0};     // seconds, absolute sim time (stage 1 start)
+  double hold_duration{0.0};  // seconds at full magnitude for stage 1 & 3
+  double rise_time{0.0};      // seconds to ramp from 0 -> magnitude (stage 1)
+  double fall_time{0.0};      // seconds to ramp from magnitude -> 0 (stage 4)
+
+  // Optional multi-stage extension (stage 2 & 3 interpolation target).
+  // When enabled, the gust vector is:
+  //   A1 = axis * magnitude
+  //   A2 = axis2 * magnitude2
+  // and evolves through four phases:
+  //   1) 0 -> A1  (rise_time, then hold_duration)
+  //   2) A1 -> A2 (rise_time2, then hold_duration2)
+  //   3) A2 -> A1 (fall_time2, then hold_duration)
+  //   4) A1 -> 0  (fall_time)
+  // If magnitude2 equals magnitude and axis2 aligns with axis, the
+  // behaviour reduces to the classic single-stage gust.
+  Eigen::Vector3d axis2{Eigen::Vector3d::UnitX()};
+  double magnitude2{0.0};
+  double hold_duration2{0.0};
+  double rise_time2{0.0};
+  double fall_time2{0.0};
+  bool multi_stage{false};
+};
+
+struct GradualWindConfig
+{
+  bool enabled{false};     // gate the gradual envelope on/off
+  double start_time{0.0};  // seconds, absolute sim time (relative if offset at ctor)
+  double stop_time{0.0};   // seconds, absolute sim time
+  // Optional cycle-aware ramp profile (e.g., ramp up in cycle 2, hold in 3-8, ramp down in 9).
+  // When enabled, ramp windows derive from the wind window start/stop (or gradual start/stop if no window).
+  // Ramp durations should be very small (e.g., < controller step_T/10) to approximate an instant switch.
+  bool cycle_profile_enabled{false};
+  double ramp_up_time{0.0};    // seconds
+  double ramp_down_time{0.0};  // seconds
+};
+
+struct WindWindowConfig
+{
+  bool enabled{false};      // gate the entire wind field on/off
+  bool auto_from_cycle{false};
+  int skip_cycles{0};       // number of initial cycles with wind off
+  int active_cycles{0};     // number of cycles with wind on
+  double cycle_time{0.0};   // seconds per cycle (if auto_from_cycle)
+  double start_time{0.0};   // manual start time (s)
+  double stop_time{0.0};    // manual stop time (s)
+};
+
 struct WindFieldConfig
 {
   WindFieldType type{WindFieldType::None};
   ConstantWindConfig constant{};
   GustWindConfig gust{};
   DrydenWindConfig dryden{};
+  GustEventConfig gust_event{};
+  GradualWindConfig gradual{};
+  WindWindowConfig window{};
 };
 
 class WindFieldBase

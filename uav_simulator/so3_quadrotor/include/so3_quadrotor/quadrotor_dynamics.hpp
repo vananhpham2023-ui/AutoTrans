@@ -206,7 +206,7 @@ class Quadrotor {
     if (vquad_rel_norm > kVelocityEps) {
       vquad_dir = vquad_rel / vquad_rel_norm;
     }
-    double resistancequad = 0.10 *                                        // C
+    double resistancequad = 0.05 *                                        // C
                         3.14159265 * (config_.arm_length) * (config_.arm_length) * // S
                         vquad_rel_norm * vquad_rel_norm;
 
@@ -216,7 +216,7 @@ class Quadrotor {
     if (vload_rel_norm > kVelocityEps) {
       vload_dir = vload_rel / vload_rel_norm;
     }
-    double resistanceload= 0.10 *                                        // C
+    double resistanceload= 0.05 *                                        // C
                         3.14159265 * (config_.arm_length) * (config_.arm_length) * // S
                         vload_rel_norm * vload_rel_norm;
 

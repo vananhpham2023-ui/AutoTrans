@@ -11,6 +11,19 @@
   <arg name="wind_dryden_sigma" default="[0.0,0.0,0.0]"/>
   <arg name="wind_dryden_length_scale" default="[50.0,50.0,20.0]"/>
   <arg name="wind_override_yaml" default="{}"/>
+  <arg name="wind_gradual_enabled" default="false"/>
+  <arg name="wind_gradual_start_time" default="0.0"/>
+  <arg name="wind_gradual_stop_time" default="0.0"/>
+  <arg name="wind_gradual_cycle_profile_enabled" default="false"/>
+  <arg name="wind_gradual_ramp_up_time" default="0.004"/>
+  <arg name="wind_gradual_ramp_down_time" default="0.004"/>
+  <arg name="wind_window_enabled" default="false"/>
+  <arg name="wind_window_auto_from_cycle" default="false"/>
+  <arg name="wind_window_skip_cycles" default="0"/>
+  <arg name="wind_window_active_cycles" default="0"/>
+  <arg name="wind_window_cycle_time" default="0.0"/>
+  <arg name="wind_window_start_time" default="0.0"/>
+  <arg name="wind_window_stop_time" default="0.0"/>
   <arg name="odometry_topic"/>
   <arg name="payload_odometry_topic"/>
 
@@ -34,6 +47,19 @@
     <rosparam param="wind/gust/axis" subst_value="true">$(arg wind_gust_axis)</rosparam>
     <rosparam param="wind/dryden/sigma" subst_value="true">$(arg wind_dryden_sigma)</rosparam>
     <rosparam param="wind/dryden/length_scale" subst_value="true">$(arg wind_dryden_length_scale)</rosparam>
+    <param name="wind/gradual/enabled" value="$(arg wind_gradual_enabled)"/>
+    <param name="wind/gradual/start_time" value="$(arg wind_gradual_start_time)"/>
+    <param name="wind/gradual/stop_time" value="$(arg wind_gradual_stop_time)"/>
+    <param name="wind/gradual/cycle_profile_enabled" value="$(arg wind_gradual_cycle_profile_enabled)"/>
+    <param name="wind/gradual/ramp_up_time" value="$(arg wind_gradual_ramp_up_time)"/>
+    <param name="wind/gradual/ramp_down_time" value="$(arg wind_gradual_ramp_down_time)"/>
+    <param name="wind/window/enabled" value="$(arg wind_window_enabled)"/>
+    <param name="wind/window/auto_from_cycle" value="$(arg wind_window_auto_from_cycle)"/>
+    <param name="wind/window/skip_cycles" value="$(arg wind_window_skip_cycles)"/>
+    <param name="wind/window/active_cycles" value="$(arg wind_window_active_cycles)"/>
+    <param name="wind/window/cycle_time" value="$(arg wind_window_cycle_time)"/>
+    <param name="wind/window/start_time" value="$(arg wind_window_start_time)"/>
+    <param name="wind/window/stop_time" value="$(arg wind_window_stop_time)"/>
     <remap from="~odom" to="$(arg odometry_topic)"/>
     <remap from="~imu" to="imu" />
     <remap from="~so3cmd" to="so3cmd"/>

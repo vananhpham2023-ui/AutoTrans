@@ -33,6 +33,21 @@
   <arg name="wind_dryden_sigma" default="[0.0,0.0,0.0]"/>
   <arg name="wind_dryden_length_scale" default="[50.0,50.0,20.0]"/>
   <arg name="wind_override_yaml" default="{}"/>
+  <!-- Gradual mean-wind ramp -->
+  <arg name="wind_gradual_enabled" default="false"/>
+  <arg name="wind_gradual_start_time" default="0.0"/>
+  <arg name="wind_gradual_stop_time" default="0.0"/>
+  <arg name="wind_gradual_cycle_profile_enabled" default="false"/>
+  <arg name="wind_gradual_ramp_up_time" default="0.004"/>
+  <arg name="wind_gradual_ramp_down_time" default="0.004"/>
+  <!-- Wind window (hard on/off gate) -->
+  <arg name="wind_window_enabled" default="false"/>
+  <arg name="wind_window_auto_from_cycle" default="false"/>
+  <arg name="wind_window_skip_cycles" default="0"/>
+  <arg name="wind_window_active_cycles" default="0"/>
+  <arg name="wind_window_cycle_time" default="0.0"/>
+  <arg name="wind_window_start_time" default="0.0"/>
+  <arg name="wind_window_stop_time" default="0.0"/>
 
   <!-- map and planner -->
   <remap from="/traj_start_trigger" to="/move_base_simple/goal"/>
@@ -97,8 +112,10 @@
     </include>
   </group>
 
+  <arg name="mpc_config" default="$(find payload_mpc_controller)/config/mpc.yaml"/>
+
   <node pkg="payload_mpc_controller" type="mpc_controller_node" name="mpc_controller_node" output="screen">
-    <rosparam command="load" file="$(find payload_mpc_controller)/config/mpc.yaml" />
+    <rosparam command="load" file="$(arg mpc_config)" />
     <rosparam command="load" file="$(find payload_mpc_controller)/config/model.yaml" />
     <remap from="~odom" to="$(arg odom_topic)"/>
     <remap from="~drone_imu/data" to="imu"/>
@@ -156,6 +173,19 @@
     <arg name="wind_dryden_sigma" value="$(arg wind_dryden_sigma)" />
     <arg name="wind_dryden_length_scale" value="$(arg wind_dryden_length_scale)" />
     <arg name="wind_override_yaml" value="$(arg wind_override_yaml)" />
+    <arg name="wind_gradual_enabled" value="$(arg wind_gradual_enabled)" />
+    <arg name="wind_gradual_start_time" value="$(arg wind_gradual_start_time)" />
+    <arg name="wind_gradual_stop_time" value="$(arg wind_gradual_stop_time)" />
+    <arg name="wind_gradual_cycle_profile_enabled" value="$(arg wind_gradual_cycle_profile_enabled)" />
+    <arg name="wind_gradual_ramp_up_time" value="$(arg wind_gradual_ramp_up_time)" />
+    <arg name="wind_gradual_ramp_down_time" value="$(arg wind_gradual_ramp_down_time)" />
+    <arg name="wind_window_enabled" value="$(arg wind_window_enabled)" />
+    <arg name="wind_window_auto_from_cycle" value="$(arg wind_window_auto_from_cycle)" />
+    <arg name="wind_window_skip_cycles" value="$(arg wind_window_skip_cycles)" />
+    <arg name="wind_window_active_cycles" value="$(arg wind_window_active_cycles)" />
+    <arg name="wind_window_cycle_time" value="$(arg wind_window_cycle_time)" />
+    <arg name="wind_window_start_time" value="$(arg wind_window_start_time)" />
+    <arg name="wind_window_stop_time" value="$(arg wind_window_stop_time)" />
   </include>
 
   <group if="$(arg use_planner)">

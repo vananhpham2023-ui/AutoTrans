@@ -12,6 +12,7 @@
 #include <float.h>
 #include "Eigen/Eigen"
 #include "mpc_params.h"
+#include "base_force_estimator.hpp"
 #include <math.h>
 #include "deque"
 #include "lbfgs.hpp"
@@ -19,7 +20,7 @@
 namespace PayloadMPC
 {
 
-  class OptForceEstimator
+  class OptForceEstimator : public BaseForceEstimator
   {
     typedef struct
     {
@@ -238,7 +239,7 @@ namespace PayloadMPC
     {
     }
 
-    void init(MpcParams &params)
+    void init(MpcParams &params) override
     {
       mass_quad_ = params.dyn_params_.mass_q;
       mass_load_ = params.dyn_params_.mass_l;
@@ -270,16 +271,16 @@ namespace PayloadMPC
       opt_var_.setZero();
     }
 
-    void enableForceEstimator()
+    void enableForceEstimator() override
     {
       use_force_estimator_ = true;
     }
-    void disableForceEstimator()
+    void disableForceEstimator() override
     {
       use_force_estimator_ = false;
     }
 
-    void setSystemState(const Eigen::Vector3d &quad_acc_body, const Eigen::Quaterniond &Rotwb, const Eigen::Vector3d &load_acc_body, const Eigen::Quaterniond &load_Rotwb, const Eigen::Vector3d cable, const Eigen::Vector4d &Rpm)
+    void setSystemState(const Eigen::Vector3d &quad_acc_body, const Eigen::Quaterniond &Rotwb, const Eigen::Vector3d &load_acc_body, const Eigen::Quaterniond &load_Rotwb, const Eigen::Vector3d cable, const Eigen::Vector4d &Rpm) override
     {
       quad_acc_ = Rotwb * quad_acc_body; //include gravity
       // quad_acc_(2) += g_;
@@ -338,7 +339,7 @@ namespace PayloadMPC
      * @remark 典型调用场景：
      * 在控制循环中实时调用，需配合setSystemState维护状态缓冲区
      */
-    void caculate_force(Eigen::Vector3d &fl, Eigen::Vector3d &fq)
+    void caculate_force(Eigen::Vector3d &fl, Eigen::Vector3d &fq) override
     {
       if (use_force_estimator_)
       {
@@ -404,6 +405,8 @@ namespace PayloadMPC
         fq = Eigen::Vector3d::Zero();
       }
     }
+
+    bool isOperational() const override { return use_force_estimator_; }
   };
 
 } // namespace PayloadMPC

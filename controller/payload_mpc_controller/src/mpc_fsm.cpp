@@ -26,6 +26,11 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <cmath>
+#include <filesystem>
+#include <iomanip>
+#include <array>
+#include <exception>
+#include <limits>
 using namespace std;
 using namespace uav_utils;
 #define USE_PX4_OR_ARDUPILOT 1 // 0: px4 1:ardupilot
@@ -66,6 +71,92 @@ namespace PayloadMPC
 		}
 		return ok;
 	}
+
+	std::string metricsSummaryPathForDirectory(const std::string &subdir)
+	{
+		if (subdir.empty())
+		{
+			return {};
+		}
+		try
+		{
+			namespace fs = std::filesystem;
+			fs::path target = fs::absolute(fs::path(subdir));
+			fs::path run_root = target.parent_path();
+			if (run_root.empty())
+			{
+				return {};
+			}
+			if (!fs::exists(run_root))
+			{
+				fs::create_directories(run_root);
+			}
+			return (run_root / "metrics_summary.txt").string();
+		}
+		catch (const std::exception &ex)
+		{
+			ROS_WARN_STREAM("[MPCctrl] Failed to resolve metrics summary path: " << ex.what());
+		}
+		return {};
+	}
+
+	void appendMetricsBlock(
+		const std::string &summary_path,
+		const std::string &header,
+		const std::vector<std::string> &lines)
+	{
+		if (summary_path.empty())
+		{
+			return;
+		}
+		std::ofstream file(summary_path.c_str(), std::ios::app);
+		if (!file.is_open())
+		{
+			ROS_WARN_STREAM("[MPCctrl] Unable to open metrics summary file " << summary_path);
+			return;
+		}
+		file << "[" << header << "]\n";
+		for (const auto &line : lines)
+		{
+			file << line << '\n';
+		}
+		file << '\n';
+	}
+
+	std::string sanitizeTagForTopic(const std::string &text)
+	{
+		std::string safe;
+		for (char ch : text)
+		{
+			if (std::isalnum(static_cast<unsigned char>(ch)) || ch == '_')
+			{
+				safe.push_back(ch);
+			}
+			else if (ch == '.' || ch == ' ')
+			{
+				safe.push_back('_');
+			}
+			else if (ch == '-')
+			{
+				safe.push_back('_');
+			}
+		}
+		if (safe.empty())
+		{
+			safe = "run";
+		}
+		return safe;
+	}
+
+	std::string resolveRunTag()
+	{
+		const char *env_tag = std::getenv("AUTOTRANS_RUN_TAG");
+		if (env_tag && env_tag[0] != '\0')
+		{
+			return sanitizeTagForTopic(env_tag);
+		}
+		return std::string("run");
+	}
 	} // namespace
 
 	MPCFSM::MPCFSM(const ros::NodeHandle &nh, MpcParams &params, MpcController &controller) : nh_(nh),
@@ -77,6 +168,9 @@ namespace PayloadMPC
 		hover_pose_.setZero();
 		hover_yaw_ = 0;
 		analytic_start_time_ = ros::Time::now();
+		double arm_length_for_drag = 0.26;
+		nh_.param("arm_length", arm_length_for_drag, arm_length_for_drag);
+		wind_drag_coeff_ = 0.05 * M_PI * arm_length_for_drag * arm_length_for_drag;
 
 		pub_predicted_trajectory_ =
 			nh_.advertise<nav_msgs::Path>("mpc/trajectory_predicted", 1);
@@ -99,7 +193,25 @@ namespace PayloadMPC
 		pub_cable_ = nh_.advertise<geometry_msgs::PoseStamped>("mpc/cable_dir_reference", 1);
 
 		pub_rmse_info_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/rmse_info", 1);
-		run_completion_pub_ = nh_.advertise<std_msgs::Empty>("/mpc/run_completed", 1, true);
+		completion_topic_base_ = "/mpc/run_completed";
+		const std::string run_tag = resolveRunTag();
+		completion_topic_tagged_ = completion_topic_base_ + "/" + run_tag;
+		try
+		{
+			run_completion_pub_ = nh_.advertise<std_msgs::Empty>(completion_topic_base_, 1, false);
+			run_completion_tagged_pub_ = nh_.advertise<std_msgs::Empty>(completion_topic_tagged_, 1, false);
+			ROS_INFO("[MPCctrl] Run completion topics: base=%s tagged=%s", completion_topic_base_.c_str(), completion_topic_tagged_.c_str());
+		}
+		catch (const ros::Exception &ex)
+		{
+			ROS_ERROR("[MPCctrl] Failed to advertise completion topics (%s). Falling back to base topic only.", ex.what());
+			run_completion_pub_ = nh_.advertise<std_msgs::Empty>(completion_topic_base_, 1, false);
+		}
+		catch (const std::exception &ex)
+		{
+			ROS_ERROR("[MPCctrl] Unexpected error advertising completion topics (%s).", ex.what());
+			run_completion_pub_ = nh_.advertise<std_msgs::Empty>(completion_topic_base_, 1, false);
+		}
 		reference_geometry_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("mpc/reference_geometry", 1);
 	analytic_rmse_sum_quad_ = 0.0;
 	analytic_rmse_sum_payload_ = 0.0;
@@ -113,8 +225,15 @@ namespace PayloadMPC
 	analytic_plot_generated_ = false;
 	actual_history_quad_.clear();
 	actual_history_payload_.clear();
+	analytic_series_history_.clear();
 
-	force_estimator_.init(params_);
+	initializeForceEstimators();
+
+	// Feed constant wind bias into MPC as early as possible.
+	std::string wind_topic;
+	nh_.param<std::string>("wind_topic", wind_topic, "/so3_quadrotor/wind");
+	wind_sub_ = nh_.subscribe<geometry_msgs::Vector3Stamped>(wind_topic, 10, &MPCFSM::windCallback, this);
+	ROS_INFO_STREAM("[MPCctrl] Subscribing wind topic: " << wind_topic << ", drag coeff=" << wind_drag_coeff_);
 }
 
 	void MPCFSM::setAnalyticTrajectory(std::unique_ptr<AnalyticTrajectory> trajectory)
@@ -128,6 +247,7 @@ namespace PayloadMPC
 			reference_payload_history_.clear();
 			actual_history_quad_.clear();
 			actual_history_payload_.clear();
+			analytic_series_history_.clear();
 			analytic_plot_generated_ = false;
 		analytic_rmse_sum_quad_ = 0.0;
 		analytic_rmse_sum_payload_ = 0.0;
@@ -165,9 +285,9 @@ namespace PayloadMPC
 	}
 	}
 
-	void MPCFSM::resetAnalyticStart(const ros::Time &stamp)
-	{
-		analytic_start_time_ = stamp;
+void MPCFSM::resetAnalyticStart(const ros::Time &stamp)
+{
+	analytic_start_time_ = stamp;
 	if (analytic_traj_)
 	{
 		analytic_traj_->reset(0.0);
@@ -182,6 +302,7 @@ namespace PayloadMPC
 	analytic_plot_generated_ = false;
 	actual_history_quad_.clear();
 	actual_history_payload_.clear();
+	analytic_series_history_.clear();
 	if (std::isfinite(analytic_cycle_time_) && analytic_cycle_time_ > 0.0)
 	{
 		analytic_next_cycle_time_ = analytic_cycle_time_;
@@ -193,6 +314,68 @@ namespace PayloadMPC
 	else
 	{
 		analytic_next_cycle_time_ = std::numeric_limits<double>::infinity();
+	}
+}
+
+void MPCFSM::initializeForceEstimators()
+{
+	lbfgs_estimator_ = std::make_unique<MultiOptForceEstimator>();
+	lbfgs_estimator_->init(params_);
+	force_estimator_ = lbfgs_estimator_.get();
+	active_force_estimator_tag_ = "lbfgs";
+
+	if (params_.force_estimator_type_ == "pinn" && params_.pinn_force_estimator_param_.enabled)
+	{
+		pinn_estimator_ = std::make_unique<PinnForceEstimator>();
+		pinn_estimator_->init(params_);
+		if (pinn_estimator_->isOperational())
+		{
+			setActiveForceEstimator(pinn_estimator_.get(), "pinn");
+		}
+		else
+		{
+			ROS_WARN("[MPCFSM] PINN estimator requested but unavailable, remaining on L-BFGS.");
+		}
+	}
+}
+
+void MPCFSM::setActiveForceEstimator(BaseForceEstimator *next, const std::string &tag)
+{
+	if (next == nullptr)
+	{
+		ROS_ERROR("[MPCFSM] Attempted to activate a null force estimator.");
+		force_estimator_ = nullptr;
+		active_force_estimator_tag_.clear();
+		return;
+	}
+	if (force_estimator_ == next)
+	{
+		return;
+	}
+	force_estimator_ = next;
+	active_force_estimator_tag_ = tag;
+	ROS_INFO_STREAM("[MPCFSM] Active force estimator switched to " << tag);
+}
+
+void MPCFSM::ensureActiveForceEstimator()
+{
+	if (pinn_estimator_ && params_.force_estimator_type_ == "pinn")
+	{
+		const bool pinn_ready = pinn_estimator_->isOperational();
+		if (pinn_ready && force_estimator_ != pinn_estimator_.get())
+		{
+			setActiveForceEstimator(pinn_estimator_.get(), "pinn");
+			return;
+		}
+		if (!pinn_ready && force_estimator_ == pinn_estimator_.get())
+		{
+			ROS_WARN_THROTTLE(1.0, "[MPCFSM] PINN estimator unhealthy, switching to L-BFGS.");
+			setActiveForceEstimator(lbfgs_estimator_.get(), "lbfgs");
+		}
+	}
+	if (!force_estimator_ && lbfgs_estimator_)
+	{
+		setActiveForceEstimator(lbfgs_estimator_.get(), "lbfgs");
 	}
 }
 
@@ -637,9 +820,35 @@ namespace PayloadMPC
 			ROS_ERROR_THROTTLE(1.0, "[MPC CTRL]RPM TOO LOW");
 			return;
 		}
+		const auto sanitize_vec3 = [](const Eigen::Vector3d &vec) {
+			Eigen::Vector3d clean = vec;
+			if (!clean.allFinite())
+			{
+				clean.setZero();
+			}
+			return clean;
+		};
 		// force_estimator_.setSystemState(imu_data.filtered_a,imu_data.q,payload_imu_data.filtered_a,payload_imu_data.q,cable_info_data.filtered_w,rpm_data.filtered_rpm);
-		Eigen::Vector3d cable_dir = cable_info_data.filtered_w.normalized();
-		force_estimator_.setSystemState(imu_data.filtered_a, odom_data.q, payload_imu_data.filtered_a, payload_imu_data.q, cable_dir, rpm_data.filtered_rpm);
+		Eigen::Vector3d cable_dir = sanitize_vec3(cable_info_data.filtered_w);
+		const double cable_norm = cable_dir.norm();
+		if (cable_norm > 1e-6)
+		{
+			cable_dir /= cable_norm;
+		}
+		else
+		{
+			cable_dir.setZero();
+		}
+		Eigen::Vector3d quad_acc = sanitize_vec3(imu_data.filtered_a);
+		Eigen::Vector3d load_acc = sanitize_vec3(payload_imu_data.filtered_a);
+		if (pinn_estimator_)
+		{
+			pinn_estimator_->setSystemState(quad_acc, odom_data.q, load_acc, payload_imu_data.q, cable_dir, rpm_data.filtered_rpm);
+		}
+		if (lbfgs_estimator_)
+		{
+			lbfgs_estimator_->setSystemState(quad_acc, odom_data.q, load_acc, payload_imu_data.q, cable_dir, rpm_data.filtered_rpm);
+		}
 		// force_estimator_.setSystemState(imu_data.a,imu_data.q,cable_imu_data.a,cable_imu_data.q,cable_info_data.w,rpm_data.rpm_vec);
 	}
 
@@ -651,7 +860,34 @@ namespace PayloadMPC
 	void MPCFSM::setForceEstimation()
 	{
 
-		force_estimator_.caculate_force(fl_, fq_);
+		ensureActiveForceEstimator();
+		if (!force_estimator_)
+		{
+			fl_.setZero();
+			fq_.setZero();
+		}
+		else
+		{
+			force_estimator_->caculate_force(fl_, fq_);
+		}
+
+		// Add wind bias so MPC has the same operating point as the simulator.
+		fl_ += fl_wind_;
+		fq_ += fq_wind_;
+		const double max_force = params_.force_estimator_param_.max_force;
+		if (max_force > 1e-6)
+		{
+			auto clamp_norm = [max_force](Eigen::Vector3d &vec)
+			{
+				const double n = vec.norm();
+				if (n > max_force)
+				{
+					vec = vec * (max_force / n);
+				}
+			};
+			clamp_norm(fl_);
+			clamp_norm(fq_);
+		}
 
 		controller_.setExternalForce(fl_, fq_);
 		// controller_.setExternalForce(Eigen::Vector3d::Zero(),fq_);  						// 仅设置无人机力
@@ -708,6 +944,46 @@ namespace PayloadMPC
 			force_marker.pose.orientation.w = q_fl.w();
 			force_marker.scale.x = fl_.norm();
 			pub_force_marker_.publish(force_marker);
+		}
+	}
+
+	void MPCFSM::windCallback(const geometry_msgs::Vector3Stamped::ConstPtr &msg)
+	{
+		wind_velocity_ = Eigen::Vector3d(msg->vector.x, msg->vector.y, msg->vector.z);
+		updateWindForce(wind_velocity_);
+	}
+
+	void MPCFSM::updateWindForce(const Eigen::Vector3d &wind)
+	{
+		if (wind_drag_coeff_ <= 0.0)
+		{
+			fl_wind_.setZero();
+			fq_wind_.setZero();
+			return;
+		}
+
+		auto compute_drag = [this](const Eigen::Vector3d &relative_velocity) -> Eigen::Vector3d
+		{
+			const double speed = relative_velocity.norm();
+			if (speed < 1e-6)
+			{
+				return Eigen::Vector3d::Zero();
+			}
+			// Drag matches simulator: -C_d * |v_rel| * v_rel.
+			return -wind_drag_coeff_ * speed * relative_velocity;
+		};
+
+		const Eigen::Vector3d quad_vel(est_state_(kVelX), est_state_(kVelY), est_state_(kVelZ));
+		const Eigen::Vector3d payload_vel(est_state_(kPayloadVx), est_state_(kPayloadVy), est_state_(kPayloadVz));
+
+		fq_wind_ = compute_drag(quad_vel - wind);
+		fl_wind_ = compute_drag(payload_vel - wind);
+
+		if (!wind_force_initialized_ && (fq_wind_.squaredNorm() > 1e-12 || fl_wind_.squaredNorm() > 1e-12))
+		{
+			ROS_INFO_STREAM("[MPCctrl] Applying initial wind force bias to MPC: quad=" << fq_wind_.transpose()
+																					   << " load=" << fl_wind_.transpose());
+			wind_force_initialized_ = true;
 		}
 	}
 	/**
@@ -1021,6 +1297,42 @@ namespace PayloadMPC
 		actual_payload_pose.pose.orientation.y = 0.0;
 		actual_payload_pose.pose.orientation.z = 0.0;
 		append_actual(actual_history_payload_, actual_payload_pose);
+
+		AnalyticSeriesSample sample;
+		sample.stamp = time;
+		sample.quad_ref_pos = {
+			reference_states(kPosX, 0),
+			reference_states(kPosY, 0),
+			reference_states(kPosZ, 0)};
+		sample.quad_actual_pos = {
+			est_state_(kPosX),
+			est_state_(kPosY),
+			est_state_(kPosZ)};
+		sample.payload_ref_pos = {
+			reference_states(kPayloadX, 0),
+			reference_states(kPayloadY, 0),
+			reference_states(kPayloadZ, 0)};
+		sample.payload_actual_pos = {
+			est_state_(kPayloadX),
+			est_state_(kPayloadY),
+			est_state_(kPayloadZ)};
+		sample.quad_ref_vel = {
+			reference_states(kVelX, 0),
+			reference_states(kVelY, 0),
+			reference_states(kVelZ, 0)};
+		sample.quad_actual_vel = {
+			est_state_(kVelX),
+			est_state_(kVelY),
+			est_state_(kVelZ)};
+		sample.payload_ref_vel = {
+			reference_states(kPayloadVx, 0),
+			reference_states(kPayloadVy, 0),
+			reference_states(kPayloadVz, 0)};
+		sample.payload_actual_vel = {
+			est_state_(kPayloadVx),
+			est_state_(kPayloadVy),
+			est_state_(kPayloadVz)};
+		analytic_series_history_.push_back(sample);
 	}
 
 	pub_predicted_trajectory_.publish(path_msg);
@@ -1063,6 +1375,14 @@ namespace PayloadMPC
 		marker.id = id;
 		marker.type = visualization_msgs::Marker::LINE_STRIP;
 		marker.action = visualization_msgs::Marker::ADD;
+		// Initialize pose to identity to avoid RViz warnings about uninitialized quaternions.
+		marker.pose.position.x = 0.0;
+		marker.pose.position.y = 0.0;
+		marker.pose.position.z = 0.0;
+		marker.pose.orientation.w = 1.0;
+		marker.pose.orientation.x = 0.0;
+		marker.pose.orientation.y = 0.0;
+		marker.pose.orientation.z = 0.0;
 		marker.scale.x = 0.02;
 		marker.color.r = r;
 		marker.color.g = g;
@@ -1384,75 +1704,192 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 		base_name += safe_tag;
 	}
 
-	std::string csv_path = plot_dir + "/" + base_name + ".csv";
-	std::ofstream csv(csv_path.c_str());
-	if (!csv.is_open())
+	const std::string metrics_summary_path = metricsSummaryPathForDirectory(plot_dir);
+	const bool have_state_samples = !analytic_series_history_.empty();
+	std::array<double, 3> position_rmse{{0.0, 0.0, 0.0}};
+	std::array<double, 3> velocity_rmse{{0.0, 0.0, 0.0}};
+	std::array<double, 3> payload_position_rmse{{0.0, 0.0, 0.0}};
+	std::array<double, 3> payload_velocity_rmse{{0.0, 0.0, 0.0}};
+	if (have_state_samples)
 	{
-		ROS_WARN_STREAM("[MPCctrl] Unable to write plot data to " << csv_path);
-	}else{
-		csv << "quad_ref_x,quad_ref_y,quad_actual_x,quad_actual_y,payload_ref_x,payload_ref_y,payload_actual_x,payload_actual_y\n";
-		size_t max_len = std::max(reference_history_.size(), actual_history_quad_.size());
-		max_len = std::max(max_len, reference_payload_history_.size());
-		max_len = std::max(max_len, actual_history_payload_.size());
-		for (size_t i = 0; i < max_len; ++i)
-		{
-			auto fetch = [](const std::vector<geometry_msgs::PoseStamped> &hist, size_t idx) -> std::pair<bool, const geometry_msgs::PoseStamped *>
+		auto compute_axis_rmse = [this](auto &&error_accessor) {
+			std::array<double, 3> sum{{0.0, 0.0, 0.0}};
+			const double denom = static_cast<double>(analytic_series_history_.size());
+			if (denom <= 0.0)
 			{
-				if (idx < hist.size())
+				return sum;
+			}
+			for (const auto &sample : analytic_series_history_)
+			{
+				for (int axis = 0; axis < 3; ++axis)
 				{
-					return {true, &hist[idx]};
+					const double err = error_accessor(sample, axis);
+					sum[axis] += err * err;
 				}
-				return {false, nullptr};
-			};
-			auto quad_ref = fetch(reference_history_, i);
-			auto quad_act = fetch(actual_history_quad_, i);
-			auto payload_ref = fetch(reference_payload_history_, i);
-			auto payload_act = fetch(actual_history_payload_, i);
-			auto emit = [&](const std::pair<bool, const geometry_msgs::PoseStamped *> &item, char axis) {
-				if (!item.first)
-				{
-					csv << "nan";
-				}
-				else
-				{
-					const auto &pose = *item.second;
-					switch (axis)
-					{
-					case 'x': csv << pose.pose.position.x; break;
-					case 'y': csv << pose.pose.position.y; break;
-					default: csv << "nan"; break;
-					}
-				}
-			};
-			emit(quad_ref, 'x'); csv << ',';
-			emit(quad_ref, 'y'); csv << ',';
-			emit(quad_act, 'x'); csv << ',';
-			emit(quad_act, 'y'); csv << ',';
-			emit(payload_ref, 'x'); csv << ',';
-			emit(payload_ref, 'y'); csv << ',';
-			emit(payload_act, 'x'); csv << ',';
-			emit(payload_act, 'y'); csv << '\n';
-		}
-		csv.close();
+			}
+			for (int axis = 0; axis < 3; ++axis)
+			{
+				sum[axis] = std::sqrt(sum[axis] / denom);
+			}
+			return sum;
+		};
+		position_rmse = compute_axis_rmse([](const AnalyticSeriesSample &sample, int axis) {
+			return sample.quad_actual_pos[axis] - sample.quad_ref_pos[axis];
+		});
+		velocity_rmse = compute_axis_rmse([](const AnalyticSeriesSample &sample, int axis) {
+			return sample.quad_actual_vel[axis] - sample.quad_ref_vel[axis];
+		});
+		payload_position_rmse = compute_axis_rmse([](const AnalyticSeriesSample &sample, int axis) {
+			return sample.payload_actual_pos[axis] - sample.payload_ref_pos[axis];
+		});
+		payload_velocity_rmse = compute_axis_rmse([](const AnalyticSeriesSample &sample, int axis) {
+			return sample.payload_actual_vel[axis] - sample.payload_ref_vel[axis];
+		});
 	}
-	std::string script = package_path + "/scripts/plot_xy.py";
-	std::string png_path = plot_dir + "/" + base_name + ".png";
-	std::ostringstream cmd;
-	cmd << "python3 \"" << script << "\" \"" << csv_path << "\" "
-		<< quad_rmse << ' ' << payload_rmse << " \"" << png_path << "\"";
-	int ret = std::system(cmd.str().c_str());
-	if (ret != 0)
+
+	std::string csv_path = plot_dir + "/" + base_name + ".csv";
+	bool csv_ready = false;
+	if (analytic_series_history_.empty())
 	{
-		ROS_WARN_STREAM("[MPCctrl] Plot script returned code " << ret);
+		ROS_WARN("[MPCctrl] No analytic tracking samples recorded; skipping CSV export.");
 	}
 	else
 	{
-		ROS_INFO_STREAM("[MPCctrl] Analytical XY plot saved to " << png_path);
-		std::string open_cmd = std::string("xdg-open \"") + png_path + "\" >/dev/null 2>&1 &";
-		int open_ret = std::system(open_cmd.c_str());
-		if (open_ret != 0)
+		std::ofstream csv(csv_path.c_str());
+		if (!csv.is_open())
 		{
-			ROS_WARN_STREAM("[MPCctrl] Failed to open plot automatically (code " << open_ret << ")");
+			ROS_WARN_STREAM("[MPCctrl] Unable to write plot data to " << csv_path);
+		}
+		else
+		{
+				csv << "time_sec,"
+					<< "quad_ref_x,quad_ref_y,quad_ref_z,"
+					<< "quad_actual_x,quad_actual_y,quad_actual_z,"
+					<< "payload_ref_x,payload_ref_y,payload_ref_z,"
+					<< "payload_actual_x,payload_actual_y,payload_actual_z,"
+					<< "quad_ref_vx,quad_ref_vy,quad_ref_vz,"
+					<< "quad_actual_vx,quad_actual_vy,quad_actual_vz,"
+					<< "payload_ref_vx,payload_ref_vy,payload_ref_vz,"
+					<< "payload_actual_vx,payload_actual_vy,payload_actual_vz\n";
+			const ros::Time base_stamp = analytic_series_history_.front().stamp;
+			for (const auto &sample : analytic_series_history_)
+			{
+				const double t = (sample.stamp - base_stamp).toSec();
+				csv << t << ','
+					<< sample.quad_ref_pos[0] << ',' << sample.quad_ref_pos[1] << ',' << sample.quad_ref_pos[2] << ','
+					<< sample.quad_actual_pos[0] << ',' << sample.quad_actual_pos[1] << ',' << sample.quad_actual_pos[2] << ','
+					<< sample.payload_ref_pos[0] << ',' << sample.payload_ref_pos[1] << ',' << sample.payload_ref_pos[2] << ','
+					<< sample.payload_actual_pos[0] << ',' << sample.payload_actual_pos[1] << ',' << sample.payload_actual_pos[2] << ','
+					<< sample.quad_ref_vel[0] << ',' << sample.quad_ref_vel[1] << ',' << sample.quad_ref_vel[2] << ','
+						<< sample.quad_actual_vel[0] << ',' << sample.quad_actual_vel[1] << ',' << sample.quad_actual_vel[2] << ','
+						<< sample.payload_ref_vel[0] << ',' << sample.payload_ref_vel[1] << ',' << sample.payload_ref_vel[2] << ','
+						<< sample.payload_actual_vel[0] << ',' << sample.payload_actual_vel[1] << ',' << sample.payload_actual_vel[2]
+						<< '\n';
+			}
+			csv.close();
+			csv_ready = true;
+		}
+	}
+	if (csv_ready)
+	{
+		std::string script = package_path + "/scripts/plot_xy.py";
+		std::string png_path = plot_dir + "/" + base_name + ".png";
+		std::ostringstream cmd;
+		cmd << "python3 \"" << script << "\" \"" << csv_path << "\" "
+			<< quad_rmse << ' ' << payload_rmse << " \"" << png_path << "\"";
+		int ret = std::system(cmd.str().c_str());
+		if (ret != 0)
+		{
+			ROS_WARN_STREAM("[MPCctrl] Plot script returned code " << ret);
+		}
+		else
+		{
+			ROS_INFO_STREAM("[MPCctrl] Analytical XY plot saved to " << png_path);
+			std::string open_cmd = std::string("xdg-open \"") + png_path + "\" >/dev/null 2>&1 &";
+			int open_ret = std::system(open_cmd.c_str());
+			if (open_ret != 0)
+			{
+				ROS_WARN_STREAM("[MPCctrl] Failed to open plot automatically (code " << open_ret << ")");
+			}
+		}
+
+		std::string state_script = package_path + "/scripts/plot_state_tracking.py";
+		std::string position_png = plot_dir + "/" + base_name + "_position.png";
+		std::string velocity_png = plot_dir + "/" + base_name + "_velocity.png";
+		std::string payload_position_png = plot_dir + "/" + base_name + "_payload_position.png";
+		std::string payload_velocity_png = plot_dir + "/" + base_name + "_payload_velocity.png";
+		std::string quad_error_png = plot_dir + "/" + base_name + "_quad_errors.png";
+		std::string payload_error_png = plot_dir + "/" + base_name + "_payload_errors.png";
+		std::ostringstream state_cmd;
+		state_cmd << "python3 \"" << state_script << "\" \"" << csv_path << "\" "
+				  << "\"" << position_png << "\" "
+				  << "\"" << velocity_png << "\" "
+				  << "\"" << payload_position_png << "\" "
+				  << "\"" << payload_velocity_png << "\" "
+				  << "\"" << quad_error_png << "\" "
+				  << "\"" << payload_error_png << "\"";
+		int state_ret = std::system(state_cmd.str().c_str());
+		if (state_ret != 0)
+		{
+			ROS_WARN_STREAM("[MPCctrl] State tracking plot script returned code " << state_ret);
+		}
+		else
+		{
+			ROS_INFO_STREAM("[MPCctrl] Position/velocity tracking plots saved to "
+							<< position_png << ", " << velocity_png << ", "
+							<< payload_position_png << ", " << payload_velocity_png << ", "
+							<< quad_error_png << ", and " << payload_error_png);
+		}
+	}
+
+	if (!metrics_summary_path.empty())
+	{
+		auto format_metric = [](const std::string &label, double value, const std::string &unit) {
+			std::ostringstream oss;
+			oss << label << " [" << unit << "]: " << std::fixed << std::setprecision(4) << value;
+			return oss.str();
+		};
+		appendMetricsBlock(
+			metrics_summary_path,
+			"XY Trajectory RMSE",
+			{
+				format_metric("Quad", quad_rmse, "m"),
+				format_metric("Payload", payload_rmse, "m"),
+			});
+		if (have_state_samples)
+		{
+			appendMetricsBlock(
+				metrics_summary_path,
+				"Position Tracking RMSE",
+				{
+					format_metric("X", position_rmse[0], "m"),
+					format_metric("Y", position_rmse[1], "m"),
+					format_metric("Z", position_rmse[2], "m"),
+				});
+			appendMetricsBlock(
+				metrics_summary_path,
+				"Velocity Tracking RMSE",
+				{
+					format_metric("X", velocity_rmse[0], "m/s"),
+					format_metric("Y", velocity_rmse[1], "m/s"),
+					format_metric("Z", velocity_rmse[2], "m/s"),
+				});
+			appendMetricsBlock(
+				metrics_summary_path,
+				"Load Position Tracking RMSE",
+				{
+					format_metric("X", payload_position_rmse[0], "m"),
+					format_metric("Y", payload_position_rmse[1], "m"),
+					format_metric("Z", payload_position_rmse[2], "m"),
+				});
+			appendMetricsBlock(
+				metrics_summary_path,
+				"Load Velocity Tracking RMSE",
+				{
+					format_metric("X", payload_velocity_rmse[0], "m/s"),
+					format_metric("Y", payload_velocity_rmse[1], "m/s"),
+					format_metric("Z", payload_velocity_rmse[2], "m/s"),
+				});
 		}
 	}
 	std_srvs::Empty srv;
@@ -1516,8 +1953,15 @@ void MPCFSM::finalizeAnalyticRun(double quad_rmse, double payload_rmse)
 		ros::Duration(0.5).sleep();
 	}
 	std_msgs::Empty completion_msg;
-	run_completion_pub_.publish(completion_msg);
-	ROS_INFO("[MPCctrl] Published run completion signal.");
+	if (run_completion_pub_)
+	{
+		run_completion_pub_.publish(completion_msg);
+	}
+	if (run_completion_tagged_pub_)
+	{
+		run_completion_tagged_pub_.publish(completion_msg);
+	}
+	ROS_INFO("[MPCctrl] Published run completion signal on %s and %s.", completion_topic_base_.c_str(), completion_topic_tagged_.c_str());
 }
 
 } // namespace PayloadMPC

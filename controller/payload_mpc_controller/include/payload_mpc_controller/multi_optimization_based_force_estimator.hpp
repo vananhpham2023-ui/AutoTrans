@@ -12,6 +12,7 @@
 #include <float.h>
 #include "Eigen/Eigen"
 #include "mpc_params.h"
+#include "base_force_estimator.hpp"
 #include <math.h>
 #include "deque"
 #include "lbfgs.hpp"
@@ -19,7 +20,7 @@
 namespace PayloadMPC
 {
 
-  class MultiOptForceEstimator
+  class MultiOptForceEstimator : public BaseForceEstimator
   {
     typedef struct
     {
@@ -227,7 +228,7 @@ namespace PayloadMPC
     int param_num_;
 
   public:
-    void init(MpcParams &params)
+    void init(MpcParams &params) override
     {
       mass_quad_ = params.dyn_params_.mass_q;
       mass_load_ = params.dyn_params_.mass_l;
@@ -262,16 +263,16 @@ namespace PayloadMPC
       opt_variable.setZero();  // 将优化变量初始化为零
     }
 
-    void enableForceEstimator()
+    void enableForceEstimator() override
     {
       use_force_estimator_ = true;
     }
-    void disableForceEstimator()
+    void disableForceEstimator() override
     {
       use_force_estimator_ = false;
     }
 
-    void setSystemState(const Eigen::Vector3d &quad_acc_body, const Eigen::Quaterniond &Rotwb, const Eigen::Vector3d &load_acc_body, const Eigen::Quaterniond &load_Rotwb, const Eigen::Vector3d cable, const Eigen::Vector4d &Rpm)
+    void setSystemState(const Eigen::Vector3d &quad_acc_body, const Eigen::Quaterniond &Rotwb, const Eigen::Vector3d &load_acc_body, const Eigen::Quaterniond &load_Rotwb, const Eigen::Vector3d cable, const Eigen::Vector4d &Rpm) override
     {
       quad_acc_ = Rotwb * quad_acc_body; //include gravity
       // quad_acc_(2) -= g_;
@@ -329,7 +330,7 @@ namespace PayloadMPC
      * 
      * @warning 需要保证调用时state_buffer已包含有效状态数据
      */
-    void caculate_force(Eigen::Vector3d &fl, Eigen::Vector3d &fq)
+    void caculate_force(Eigen::Vector3d &fl, Eigen::Vector3d &fq) override
     {
       if (use_force_estimator_)
       {
@@ -441,6 +442,8 @@ namespace PayloadMPC
         fq = Eigen::Vector3d::Zero();
       }
     }
+
+    bool isOperational() const override { return use_force_estimator_; }
   };
 
 } // namespace PayloadMPC

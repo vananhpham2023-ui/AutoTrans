@@ -6,7 +6,7 @@ import math
 import os
 import threading
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import numpy as np
 import rospy
@@ -20,6 +20,7 @@ try:
         CSV_FIELDS,
         compute_rmse,
         render_force_plot,
+        render_force_error_plot,
         render_wind_velocity_plot,
         plt as plotter_plt,
     )
@@ -35,6 +36,7 @@ except ImportError:
         CSV_FIELDS,
         compute_rmse,
         render_force_plot,
+        render_force_error_plot,
         render_wind_velocity_plot,
         plt as plotter_plt,
     )
@@ -68,12 +70,16 @@ class ForceDataRecorder:
             os.environ.get("FORCE_DATA_OUTPUT", default_dir),
         )
         os.makedirs(output_dir, exist_ok=True)
+        self._output_dir = output_dir
+        self._run_root_dir = os.path.dirname(os.path.abspath(output_dir)) if output_dir else ""
         safe_tag = ''.join(c if c.isalnum() or c in "-_" else "-" for c in run_tag)
         prefix = f"force_{safe_tag}"
         self.csv_path = os.path.join(output_dir, f"{prefix}.csv")
         self.png_path = os.path.join(output_dir, f"{prefix}.png")
         self.totals_png_path = os.path.join(output_dir, f"{prefix}_totals.png")
         self.wind_png_path = os.path.join(output_dir, f"{prefix}_wind.png")
+        self.errors_png_path = os.path.join(output_dir, f"{prefix}_errors.png")
+        self.error_totals_png_path = os.path.join(output_dir, f"{prefix}_errors_totals.png")
         rospy.loginfo("[force_data_recorder] Writing outputs under %s (run_tag=%s)", output_dir, safe_tag)
 
         self._cycle_seconds = self._cycle_duration()
@@ -103,6 +109,53 @@ class ForceDataRecorder:
             self._sync.registerCallback(self._on_force_pair)
 
         rospy.on_shutdown(self._on_shutdown)
+
+    def _metrics_summary_path(self) -> Optional[str]:
+        if not self._run_root_dir:
+            return None
+        return os.path.join(self._run_root_dir, "metrics_summary.txt")
+
+    def _append_metrics_block(self, header: str, lines: Sequence[str]) -> None:
+        if not lines:
+            return
+        path = self._metrics_summary_path()
+        if not path:
+            return
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "a", encoding="utf-8") as handle:
+                handle.write(f"[{header}]\n")
+                for line in lines:
+                    handle.write(line + "\n")
+                handle.write("\n")
+        except OSError as exc:
+            rospy.logwarn("[force_data_recorder] Failed to append metrics summary (%s): %s", header, exc)
+
+    def _record_force_rmse(self, rmse: Dict[str, Dict[str, np.ndarray]]) -> None:
+        if not rmse:
+            return
+        fl = rmse.get("fl")
+        fq = rmse.get("fq")
+        if not fl or not fq:
+            return
+        fmt = lambda label, value, unit: f"{label} [{unit}]: {float(value):.4f}"
+        load_lines = [
+            fmt("X", fl["components"][0], "N"),
+            fmt("Y", fl["components"][1], "N"),
+            fmt("Z", fl["components"][2], "N"),
+        ]
+        quad_lines = [
+            fmt("X", fq["components"][0], "N"),
+            fmt("Y", fq["components"][1], "N"),
+            fmt("Z", fq["components"][2], "N"),
+        ]
+        total_lines = [
+            fmt("Load total", fl["total"][0], "N"),
+            fmt("Quad total", fq["total"][0], "N"),
+        ]
+        self._append_metrics_block("Load Force RMSE", load_lines)
+        self._append_metrics_block("Quad Force RMSE", quad_lines)
+        self._append_metrics_block("Total Force RMSE", total_lines)
 
     def _cycle_duration(self) -> float:
         """Infer the reference trajectory cycle duration from MPC parameters."""
@@ -365,6 +418,7 @@ class ForceDataRecorder:
             rmse["fq"]["components"][1],
             rmse["fq"]["components"][2],
         )
+        self._record_force_rmse(rmse)
 
         try:
             render_force_plot(
@@ -381,6 +435,21 @@ class ForceDataRecorder:
             )
         except RuntimeError as exc:
             rospy.logwarn("Failed to render force comparison plot: %s", exc)
+
+        try:
+            render_force_error_plot(
+                samples,
+                output_path=self.errors_png_path,
+                total_output_path=self.error_totals_png_path,
+                show=False,
+            )
+            rospy.loginfo(
+                "[force_data_recorder] Saved force error plots to %s and %s",
+                self.errors_png_path,
+                self.error_totals_png_path,
+            )
+        except RuntimeError as exc:
+            rospy.logwarn("Failed to render force error plot: %s", exc)
 
         if self._wind_enabled:
             wind_samples = [s for s in samples if "wind" in s]
