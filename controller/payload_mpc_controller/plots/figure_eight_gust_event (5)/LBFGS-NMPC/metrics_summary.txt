@@ -1,0 +1,38 @@
+[XY Trajectory RMSE]
+Quad [m]: 134.1081
+Payload [m]: 133.7592
+
+[Position Tracking RMSE]
+X [m]: 28.8387
+Y [m]: 63.0173
+Z [m]: 114.6950
+
+[Velocity Tracking RMSE]
+X [m/s]: 3.3226
+Y [m/s]: 7.3765
+Z [m/s]: 13.6042
+
+[Load Position Tracking RMSE]
+X [m]: 28.9906
+Y [m]: 62.9422
+Z [m]: 114.2908
+
+[Load Velocity Tracking RMSE]
+X [m/s]: 3.3324
+Y [m/s]: 7.3606
+Z [m/s]: 13.5805
+
+[Load Force RMSE]
+X [N]: 1.5704
+Y [N]: 1.4134
+Z [N]: 0.3535
+
+[Quad Force RMSE]
+X [N]: 2.0600
+Y [N]: 3.5466
+Z [N]: 4.3161
+
+[Total Force RMSE]
+Load total [N]: 2.1421
+Quad total [N]: 5.9540
+

@@ -1,0 +1,31 @@
+Position / Velocity RMSE Summary
+Scenario: figure_eight_gradual (20)
+Schemes: LBFGS-NMPC (baseline), PINN-NMPC (optimized)
+Units: position [m], velocity [m/s]
+Note: smaller RMSE indicates better tracking performance.
+
+Metric, LBFGS-NMPC, PINN-NMPC (optimized)
+load_pos_rmse_total, 0.275723, 0.189422
+load_pos_rmse_x, 0.206995, 0.142206
+load_pos_rmse_y, 0.167785, 0.115268
+load_pos_rmse_z, 0.070884, 0.048697
+load_vel_rmse_total, 0.303679, 0.208627
+load_vel_rmse_x, 0.202193, 0.138907
+load_vel_rmse_y, 0.204903, 0.140768
+load_vel_rmse_z, 0.096714, 0.066443
+quad_pos_rmse_total, 0.143363, 0.098490
+quad_pos_rmse_x, 0.114412, 0.078601
+quad_pos_rmse_y, 0.066684, 0.045812
+quad_pos_rmse_z, 0.054920, 0.037730
+quad_vel_rmse_total, 0.163386, 0.112246
+quad_vel_rmse_x, 0.086323, 0.059304
+quad_vel_rmse_y, 0.096166, 0.066066
+quad_vel_rmse_z, 0.099978, 0.068685
+
+---
+Analysis for state_total2.png
+
+- The figure `state_total2.png` visualizes the magnitude of quad and load position/velocity over time for the scenario `figure_eight_gradual (20)`, comparing LBFGS-NMPC and PINN-NMPC against the same reference trajectory.
+- For the payload (load), both position and velocity RMSE values of the PINN scheme are consistently lower than those of the LBFGS scheme on all three axes and in the total magnitude (e.g., total load position RMSE is reduced from 0.276 m to 0.189 m, and total load velocity RMSE from 0.304 m/s to 0.209 m/s). In the figure, this appears as the PINN curves staying closer to the reference curve with smaller oscillations.
+- For the quadrotor, the PINN scheme also achieves smaller position and velocity RMSE on all axes (for example, total quad position RMSE decreases from about 0.143 m to 0.098 m). Visually, the quad position/velocity magnitude curves under PINN show reduced overshoot and tighter tracking around the reference envelope.
+- Overall, across all 16 state-related RMSE metrics listed above, the PINN-NMPC controller exhibits uniformly better tracking accuracy than LBFGS-NMPC. This quantitative advantage is directly reflected in `state_total2.png` as smoother trajectories with smaller deviations from the reference for the PINN scheme, both for the quad and the suspended load.

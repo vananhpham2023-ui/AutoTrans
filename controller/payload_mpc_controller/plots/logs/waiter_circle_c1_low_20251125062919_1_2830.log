@@ -1,0 +1,14 @@
+Unable to register with master node [http://127.0.0.1:11312]: master may not be running yet. Will keep trying.
+[INFO] [1764052316.491621]: Waiting for completion on /mpc/run_completed/circle_c1_low_20251125062919_1_2830 (started at 1764052316.491)
+Traceback (most recent call last):
+  File "/home/wangshengkai/autotrans_ws/devel/.private/payload_mpc_controller/lib/payload_mpc_controller/wait_for_completion.py", line 15, in <module>
+    exec(compile(fh.read(), python_script, 'exec'), context)
+  File "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/scripts/wait_for_completion.py", line 68, in <module>
+    sys.exit(main())
+  File "/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/scripts/wait_for_completion.py", line 60, in main
+    rospy.wait_for_message(topic, Empty)
+  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/client.py", line 424, in wait_for_message
+    rospy.rostime.wallsleep(0.01)            
+  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/rostime.py", line 277, in wallsleep
+    time.sleep(duration) 
+KeyboardInterrupt

@@ -1,0 +1,143 @@
+paper1 整体工作总结（基于 TASK1–TASK9 与代码核对）
+
+一、项目总体目标与工作范围
+- 面向挂载负载的四旋翼无人机，在统一仿真平台上建立“解析轨迹 + 风场扰动 + 外力估计 + PINN 训练与部署”的闭环体系，为论文中控制与估计性能的系统对比提供可复现的工程基础。
+- 代码层面覆盖 AutoTrans 控制/仿真栈与 deepxde PINN 训练栈：前者负责轨迹生成、SO(3) 动力学仿真与外力估计闭环，后者负责基于物理约束的 PINN 训练与推理导出。
+- 本总结基于 `src/AutoTrans/paper1/任务汇总/TASK1–TASK3、TASK6–TASK9` 以及 `/home/wangshengkai/deepxde/TASK4、TASK5` 与实际代码的逐项比对，重点反映已经落地并支撑 paper1 实验的数据流与技术路径。
+
+二、控制端解析轨迹与控制-only 流程（TASK1）
+- 解析轨迹参考接口
+  - 在 `mpc.yaml` 新增 `reference` 配置段，引入 `use_planner` 与 `mode ∈ {circle, figure_eight, helix}` 以及三类轨迹的半径、角速度、中心、海拔/升速等参数；默认 `use_planner: true`，保持旧规划器行为。
+  - 在 `MpcParams` 中新增 `ReferenceConfig` 结构，封装上述参数并在 `config_from_ros_handle` 中完成读取、合法性校验与日志输出（非法取值回退默认并打印警告），实现统一的参考轨迹配置入口。
+  - 新增 `reference_generator.h/.cpp`，定义抽象基类 `AnalyticTrajectory`（3×6 PVAJSC 采样接口），并实现 `CircleTrajectory`、`FigureEightTrajectory`、`HelixTrajectory`，显式推导到五阶导数；对应的 `reference_generator_test.cpp` 覆盖三类轨迹的解析公式、终端冻结与 `reset()` 行为（`reference_generator_test` gtest 目标可在 catkin 中运行）。
+- 控制器与 FSM 集成
+  - 在 `MpcController` 中新增 `setAnalyticReference(...)` 重载，沿用原有平坦化与 yaw 规划逻辑：对给定解析轨迹的 PVAJSC 进行负载平坦化映射，生成无人机状态参考与输入参考，保持与多项式轨迹分支一致的 yaw 限幅与约束处理。
+  - 在 `MPCFSM` 中引入 `Exec_Traj_State_t::ANALYTIC`、`std::unique_ptr<AnalyticTrajectory> analytic_traj_` 与 `ros::Time analytic_start_time_`，并在 `CMD_CTRL_process` 中按 `reference_config().use_planner` 自动在 HOVER / ANALYTIC / POLY_TRAJ 之间切换；切换到解析轨迹时重置起始时间，避免时间轴漂移。
+  - `MPCFSM::setAnalyticTrajectory` 与 `resetAnalyticStart` 负责创建/重置解析轨迹实例，同时清空 RMSE/轨迹历史，并推导出周期时间与有限时长（helix）以支持周期计数和“终端保持”逻辑。
+- 节点与可视化流程
+  - 在 `mpc_controller_node.cpp` 中读取 `ReferenceConfig`，在 `use_planner=false` 时构造对应解析轨迹并注入 FSM；此时不再订阅规划器相关话题（`traj/cmd`），而是直接跟踪解析轨迹。
+  - `replan.launch` 与 `controller_only.launch` 通过参数将参考配置与风场参数传入 `mpc_controller_node` 与仿真器；在 `use_planner=false` 时使用 `controller_only.rviz` 精简视图，仅显示无人机-负载与轨迹跟踪结果，并基于 FSM 内部的解析 RMSE 统计在控制-only 模式下评估跟踪性能。
+- 接口落地文件：
+  - `controller/payload_mpc_controller/config/mpc.yaml`（reference 段）与 `include/payload_mpc_controller/mpc_params.h:206-342`（ReferenceConfig 读取 + 校验）。
+  - `include/payload_mpc_controller/reference_generator.h`、`src/.../reference_generator.cpp`、`test/reference_generator_test.cpp`（解析轨迹生成与单元测试）。
+  - `src/payload_mpc_controller/src/mpc_controller.cpp:321-420`（`setAnalyticReference`）、`src/payload_mpc_controller/src/mpc_fsm.cpp:251-420,623-833`（FSM 切换与 RMSE 统计）。
+  - `src/payload_mpc_controller/src/mpc_controller_node.cpp:65-172`（节点集成）以及 `planner/plan_manage/launch/replan.launch`、`controller_only.launch`（参数与 RViz 切换）。
+
+三、风场建模、SO(3) 仿真与外力真值通路（TASK2）
+- 动力学与外力接口改造
+  - 在 `quadrotor_dynamics.hpp` 中引入 `setWindVelocity(wind_quad_world, wind_load_world)`，并将原有气动力计算替换为基于相对风速 `v_rel = v - wind_world` 的阻力模型；分别对无人机与负载计算阻力并写入 `fq`、`fl`，在 Runge–Kutta 积分步中同时获得动力学演化与上一次积分末的真实外力 `fq_true_` / `fl_true_`。
+  - 在 SO(3) 节点 `so3_quadrotor_nodelet.cpp` 中新增 `true_force_pub_` 与 `wind_pub_`，在主循环中以配置频率发布 `/so3_quadrotor/true_force`（`AccelStamped`，linear=fl、angular=fq）和 `/so3_quadrotor/wind`（`Vector3Stamped`），形成与控制器估计值对齐的外力真值与风速观测通路。
+- 风场抽象与类型实现
+  - 在 `so3_quadrotor/wind_field` 下定义 `WindFieldBase` 抽象类与 `WindFieldConfig`；实现 `None`、`Constant`、`PeriodicGust`（正弦/方波）、`Dryden`、`GustEvent`、`Gradual`、`Composite` 等风场类型，并通过 `loadWindFieldConfig` 与 `createWindField` 实现 YAML → 实例的解析与创建。
+  - `DrydenWindField` 基于 MIL-F-8785C 模型实现一阶/二阶滤波器驱动的三轴湍流，支持高度衰减、带宽与尺度参数；`GustEventWindField` 与 `GradualWindField` 通过窗口与平滑包络实现确定性阵风及渐变风场，并与周期信息（解析轨迹周期）对齐以满足“多周期开/关”需求。
+- 模拟器与 launch 集成
+  - 在 `so3_quadrotor.yaml` 中新增 `wind` 参数块（type、constant/gust/dryden/composite 子配置），为仿真器提供统一的风场配置入口。
+  - 在 `so3_quadrotor_nodelet` 的 `onInit()` 中创建 `wind_field_` 实例、订阅参数命名空间 `~wind`，并在每个仿真 tick 中对无人机/负载位置采样风速、调用 `setWindVelocity` 并发布 `/wind`。
+  - 在规划器与控制器 launch 中通过 `wind_type`、`wind_constant_velocity`、`wind_dryden_*`、`wind_gradual_*`、`wind_window_*`、`wind_override_yaml` 等参数将高层的风场预设映射为底层风场配置；`controller_only.launch` 与 `replan.launch` 同时启动 `force_data_recorder` 节点，用于对齐 `/true_force`、`/mpc/force` 与 `/so3_quadrotor/wind`，输出 RMSE 与对比图。
+- 稳定性修复与调试
+  - 修复 `so3_quadrotor_nodelet` 在 RViz 启动时访问未初始化 `vis_msg_.markers[7]` 导致的崩溃：调整可视化 marker 初始化顺序，并在 `timer_callback` 中对 `markers.size()<8` 场景增加保护与节流日志；经 `test_simulator.launch` 验证稳定。
+- 接口落地文件：
+  - `uav_simulator/so3_quadrotor/include/.../quadrotor_dynamics.hpp`（`setWindVelocity` 与 Runge–Kutta 真值输出）。
+  - `uav_simulator/so3_quadrotor/src/so3_quadrotor_nodelet.cpp`（风/真值话题、风场实例化、marker 修复）。
+  - `uav_simulator/so3_quadrotor/include/.../wind_field/wind_field.h` 与 `src/.../wind_field_factory.cpp`（风场枚举、GustEvent/Gradual/Dryden/Composite 实现）。
+  - `uav_simulator/uav_simulator/config/so3_quadrotor.yaml`、`planner/plan_manage/launch/simulator.xml`（wind 参数与 override）、`planner/plan_manage/launch/replan.launch` & `controller_only.launch`（wind_* 参数分发、`force_data_recorder` 启动）。
+
+四、PINN 训练数据采集与批量仿真流水线（TASK3、部分 TASK9）
+- 单场景数据采集（手动/半自动）
+  - `pinn_data_recorder.py` 订阅 `/so3_quadrotor/true_force`、`/mpc_controller_node/mpc/force`、无人机/负载里程计与 IMU、缆绳 IMU、RPM 与 `/so3_quadrotor/wind` 等话题，以真值外力时间戳为锚点对齐多源信号，输出一行包含 37+ 列特征与真/估计外力的样本。
+  - 录制输出统一为 `pinn_dataset_<场景ID>_YYYYMMDD_HHMMSS.csv`，字段与 deepxde 训练栈的 FULL_FEATURE_COLUMNS + FORCE 列严格对齐（时间、状态、几何、推力与外力真值/估计值、风速等）。
+  - `controller_only.launch` 为解析轨迹模式提供一键启动入口，通过 `PINN_SCENARIO_ID` 与 `AUTOTRANS_RUN_TAG` 环境变量标记场景 ID 与运行标签，方便后续数据管理与 Task9 合并。
+- 批量场景设计与自动化仿真
+  - 在 `batch_data_collection.py` 中定义 114 个场景（TRAJECTORIES × 风向 × 风速 × 湍流等级），并提供 full/lite 两种 profile；每个场景对应具体轨迹（circle/figure_eight）、风场组合（Dryden + 恒定风）与风速/湍流参数。
+  - 脚本在独立 ROS master 上串行执行各场景：启动 `controller_only.launch`、预热、启动 `pinn_data_recorder`、监听 `/mpc/run_completed` 完成事件、优雅终止仿真，并在 `controller/payload_mpc_controller/plots/run_<scenario>_<UTC>_<attempt>_<rand>/` 下写出 `pinn/`、`force/`、`analytic/` 子目录及对应 CSV/PNG。
+  - `wait_for_completion.py` 与 FSM 中的 `run_completion_pub_`/`run_completion_tagged_pub_` 协同工作：FSM 在达到目标解析周期数后发布 `/mpc/run_completed[/<run_tag>]`，脚本阻塞等待该事件并在超时情况下退回基于时间的停止路径，同时通过 pkill + 退出码解析实现对 RViz 的平滑关闭。
+- 采集数据合并与质量控制
+  - `merge_pinn_datasets.py` 在 `plots` 目录递归扫描 `pinn_dataset_*.csv`，基于必需字段与推力范围过滤非法样本，将多场景数据合并为 `clean_dataset_task9_v2.csv`，作为 Task9 最终训练输入的上游。
+  - 通过简单计数与场景列表对照，确保 clean_dataset 覆盖预期场景数，若发现“失控/严重跑飞”场景，可手动删除对应 CSV 并重新合并。
+- 接口落地文件：
+  - `controller/payload_mpc_controller/scripts/pinn_data_recorder.py`（多话题同步、字段定义）。
+  - `planner/plan_manage/launch/controller_only.launch`（`AUTOTRANS_RUN_TAG/PINN_SCENARIO_ID` 环境变量与输出目录）。
+  - `src/AutoTrans/batch_data_collection.py`、`controller/.../scripts/wait_for_completion.py`（批量运行、completion 监听）。
+  - `controller/.../scripts/merge_pinn_datasets.py`（数据合并与字段校验）、`controller/.../scripts/force_data_recorder.py`（真值/估计力对齐与 RMSE 导出）。
+
+五、deepxde PINN 物理建模与训练栈改造（TASK4、TASK5）
+- 特征工程与最小特征集
+  - 在 `estimation/cli.py` 中定义 37 维 FULL_FEATURE_COLUMNS（时间、无人机/负载位置/速度/加速度、机体系角速度、缆绳方向、姿态矩阵第三列、推力、质量、重力、绳长、风速等），同时将网络输入特征收缩为 13 维 FEATURE_COLUMNS：
+    - 加速度：`accQ_x/y/z`、`accL_x/y/z`
+    - 几何：`rho_x/y/z`、`ez_world_x/y/z`
+    - 控制量：`thrust`
+  - 通过 `ConstantManager` 将 `m_Q/m_L/g/l_length` 等常量/缓慢变量从网络输入中剥离，仅在残差计算中使用，提高数值稳定性与可解释性。
+- 归一化与数据工具
+  - 在 `data_utils.py` 中实现对输入特征的 MinMax → [-1,1] 归一化（`Normalizer`），支持张量端反归一化与缓存机制；输出保持物理量级，便于与 C++ 端直接对齐。
+  - `compute_normalizer_stats.py` 在训练前基于合并后的训练集（如 `force_estimation_task9_v2.csv`）计算 13 维输入与 6 维输出的 min/max/mean/std，并生成 JSON (`normalizer_stats_task9*.json`)，用于 C++ 端归一化参数固化与版本管理。
+- 物理残差与损失构造
+  - 在 `physics.py` 中通过 `ResidualContext` 描述索引布局，并实现三类残差：
+    - r1 力平衡：`f_Q + f_L = m_Q(g+acc_Q) + m_L(g+acc_L) − thrust·ez_world`
+    - r2 力矩平衡：基于缆绳方向与 aero_term 构建力矩残差；
+    - r3 平行约束：`rho ⋅ f_L = 0`。
+  - 在 `training.py` 中使用 `build_network`（13→128×5→6 FNN）与 `build_observation_bcs`（基于可选观测列自动添加 PointSetBC），并通过 `build_loss_weight_vector` 组合 PDE 残差与观测损失权重，形成可调的物理监督框架。
+- CLI 与导出工具
+  - `estimation/cli.py` & `force_estimation.py` 提供统一 CLI：支持从单文件/目录加载数据、量纲裁剪（quantile clipping）、训练/评估、残差统计与导出 TorchScript/ONNX/normalizer；训练输出通过 `export_utils` 写出 `.pt` 模型、元数据与 normalizer JSON。
+  - `metrics_logger.py`、`gradient_monitor.py` 与 `weight_scheduler.py` 用于记录训练/残差/梯度统计与自适应权重调度，为论文中的残差对比表与训练曲线提供直接数据来源。
+- 接口落地文件：`/home/wangshengkai/deepxde/estimation/cli.py`、`data_utils.py`、`physics.py`、`training.py`、`export_utils.py`、`metrics_logger.py`、`gradient_monitor.py`、`weight_scheduler.py`（均在 deepxde 仓库 `estimation/` 目录下）。
+
+六、PINN 外力估计器 C++ 集成与配置（TASK6）
+- 估计器接口抽象与多实现并存
+  - 新增 `BaseForceEstimator` 抽象类，统一 `init` / `enable/disable` / `setSystemState` / `caculate_force` / `isOperational` 接口；原 L-BFGS 估计器迁移为 `MultiOptForceEstimator`（仍基于多次 L-BFGS 求解）。
+  - `MPCFSM` 使用 `std::unique_ptr<BaseForceEstimator>` 管理 L-BFGS 与 PINN 两种估计器，并通过 `ensureActiveForceEstimator()` 根据参数与运行状态在两者之间切换。
+- PinnForceEstimator 实现与运行时行为
+  - 在 `pinn_force_estimator.hpp/.cpp` 中实现 `PinnForceEstimator`：
+    - 输入 13 维特征：四旋翼/负载机体系加速度、缆绳单位方向、机体 z 轴在世界系的投影（R13/R23/R33）、合力推力；
+    - 通过 `NormalizerSet` 根据 `normalizer_stats*.json` 对输入做 MinMax 归一化；输出保持物理量级；
+    - 使用 LibTorch `torch::jit::load` 加载 TorchScript 模型，预分配输入 buffer 与 `IValue` 向量，在 300 Hz 回路中无额外内存分配。
+  - 输出后处理：
+    - 使用 `max_force` 与二范数限制对 `f_Q/f_L` 做幅值裁剪，并支持一阶 EMA 滤波（`ema_alpha` 可从 YAML 调整）与二阶低通 `LowPassFilter2p` 滤波（cutoff/from mpc.yaml），在保证相位延迟可控的前提下降低估计噪声。
+    - 通过 saturation guard 监测长时间接近饱和的输出，并在连续触发超过给定阈值时视为异常。
+  - 故障回退与健康检查：
+    - 若模型/normalizer 路径缺失、加载失败、输入/输出出现 NaN/Inf 或运行中连续失败超过 `failover_threshold`，自动禁用 PINN、清零输出，并通过 `isOperational()` 与 `ensureActiveForceEstimator()` 回退至 L-BFGS；相关原因通过 ROS 日志输出。
+- 参数与 YAML 配置
+  - `MpcParams` 中新增 `PinnForceEstimatorConfig`，在 `config_from_ros_handle` 中通过 `force_estimator/type` 与 `force_estimator/pinn/*` 读取 PINN 类型、模型路径、normalizer 路径、EMA 系数与 failover 阈值，默认保持 `type: lbfgs` 以兼容旧配置。
+  - `lbfgs_nmpc.yaml` 保持 L-BFGS 为主，保留 `pinn` 子配置作为实验备用；`pinn_nmpc.yaml` 与 `pinn_nmpc阵风.yaml` 将 `force_estimator/type` 切换为 `pinn`，并指向不同任务阶段导出的模型（早期 `script3/script5`、后期 Task9 v2 模型）。
+- 接口落地文件：
+  - `include/payload_mpc_controller/base_force_estimator.hpp`、`.../multi_optimization_based_force_estimator.hpp`（LBFGS 迁移）。
+  - `include/payload_mpc_controller/pinn_force_estimator.hpp` 与 `src/.../pinn_force_estimator_libtorch.cpp`（LibTorch 推理、Normalizer、EMA/LPF 后处理）。
+  - `src/payload_mpc_controller/src/mpc_fsm.cpp:337-420,933-980`（估计器初始化/切换/风偏）。
+  - `controller/payload_mpc_controller/config/lbfgs_nmpc.yaml`、`pinn_nmpc.yaml`、`pinn_nmpc阵风.yaml`（配置切换）。
+
+七、数据扩展、模型重训练与评估（TASK7、TASK9）
+- Task9 v1/v2 数据闭环
+  - 利用 `batch_data_collection.py` 与 `pinn_data_recorder.py` 在 circle/figure-eight + 多风场场景下采集 Task9 v1 数据集，并在 AutoTrans 内部完成多场景合并与清洗。
+  - 在 Task9 v2 中，基于更严格的合并与清理流程（`merge_pinn_datasets.py` → `convert_clean_dataset.py` → `clean_force_estimation_csv.py`），在 deepxde 端生成 `force_estimation_task9_v2.csv`，并用其训练新的 PINN 模型（`estimation/force_estimation.py`，PyTorch backend）。
+  - 通过 `compute_normalizer_stats.py` 基于最终训练集生成 `normalizer_stats_task9_v2.json`，并将导出的 TorchScript 模型 `force_estimation_task9_v2.pt` 与 normalizer JSON 拷贝回 AutoTrans（`src/AutoTrans/force_estimation_task9_v2.pt`、`models/normalizer_stats_task9_v2.json`），在 `pinn_nmpc.yaml` 中替换原 Task9 模型与 normalizer。
+- 评估与对比实验
+  - 使用 `pinn_nmpc.yaml` 在多个风场场景下运行仿真，借助 `force_data_recorder` 输出新的 force 比较 CSV/图像，并通过 `pinn_manual.csv` 及相关脚本对 PINN/L-BFGS RMSE、饱和情况与时域响应进行对比。
+  - 在 deepxde 侧使用 `compute_residual_metrics_numpy` 与残差方差表，对新旧模型在 r1/r2/r3 物理残差上的表现进行统计，形成论文中物理一致性实验的基础。
+- 接口落地文件：
+  - `controller/payload_mpc_controller/config/pinn_nmpc.yaml`、`pinn_nmpc阵风.yaml`（Task9 v2 模型/normalizer）。
+  - `controller/.../scripts/compute_normalizer_stats.py`、`estimation/datasets/convert_clean_dataset.py`、`estimation/datasets/clean_force_estimation_csv.py`（数据清洗与统计）。
+  - `controller/.../scripts/force_data_recorder.py`、`controller/.../scripts/compare_nmpc_schemes.py`、`src/AutoTrans/pinn_manual.csv`（评估与可视化）。
+
+八、复杂风场场景与方案对比可视化（TASK8）
+- 场景设计
+  - 设计 figure-eight 轨迹下的水平风、上斜风、下斜风以及复合 Dryden+阵风/渐变风等重度扰动场景，通过 `controller_only.launch` 参数或 `my_scenarios.json` 预设进行复现。
+  - `my_scenarios.json` 中定义代表性 scenario（如 `figure_eight_gust_event`），并保留渐变风/多阶段阵风等 JSON 模板，便于扩展更多论文实验场景。
+- 双方案自动化对比脚本
+  - `compare_nmpc_schemes.py` 以 `controller_only.launch` 为基础，对每个场景自动执行两组仿真：方案 A 使用 `mpc-config-a`（通常为 `pinn_nmpc.yaml`，即 PINN-NMPC），方案 B 使用 `mpc-config-b`（如 `lbfgs_nmpc.yaml`，即 LBFGS-NMPC）。
+  - 脚本在每个场景下：
+    - 启动 roslaunch + `force_data_recorder` + 解析轨迹 analytics；
+    - 读取生成的 `analytic_xy_*.csv` 与 `force_*.csv`；
+    - 计算无人机/负载位置 RMSE 并输出宏观柱状图（场景 × {PINN,LBFGS}）；
+    - 生成包含无人机/负载位置/速度及误差的多子图对比、以及总力估计误差与总力时序对比图，展示动态性能与瞬态响应差异。
+  - 输出集中在 `payload_mpc_controller/plots/comparison/`，为论文中的曲线与柱状图提供可复现的生成路径。
+
+九、完成情况、小结与后续工作
+- 核对结论
+  - `TASK1–TASK3、TASK6–TASK9` 与 AutoTrans 代码，以及 deepxde 仓库的 `TASK4、TASK5` 与 `estimation/*` 实现，在关键目标、技术路径与核心细节上保持一致；任务文档中引用的文件、脚本与参数（解析轨迹、风场、数据采集、PINN 训练与 C++ 集成等）均有对应实现并已在仓库中使用。
+  - 部分文档中给出的 JSON/命令示例（如 TASK7 中的时间窗口/LSTM 结构、部分 TASK8 场景模板）目前仍作为设计草案存在，并未在当前代码中完全落地；论文实验与代码实现主要基于 FNN + 单帧特征的 PINN 模型与现有场景集合展开。
+- 对 paper1 的支撑
+  - 解析轨迹 + 风场仿真 + 外力真值/PINN 估计闭环，为论文中轨迹跟踪与力估计性能对比提供了完整的实验平台。
+  - deepxde 物理建模与 C++ PINN 集成，使得基于同一物理残差与归一化策略的模型可在 Python 与 AutoTrans 中一致运行，支持精细的残差与 RMSE 评估。
+  - 批量数据采集、清洗、训练与自动化对比脚本确保实验可复现、配置可追踪，满足论文复现实验与后续扩展（如时序特征、更多风场场景）的需求。
+
+整体而言，paper1 所需的控制器改造、风场与外力真值通路、PINN 训练/推理栈以及双方案比较工具链均已在 AutoTrans 与 deepxde 中实现并联调完成，当前仓库状态能够完整支撑论文的实验与结果展示。
+ 

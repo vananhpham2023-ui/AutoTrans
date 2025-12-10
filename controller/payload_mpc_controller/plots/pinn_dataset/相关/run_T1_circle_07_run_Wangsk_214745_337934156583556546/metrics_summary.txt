@@ -1,0 +1,14 @@
+[Load Force RMSE]
+X [N]: 0.8053
+Y [N]: 0.9800
+Z [N]: 0.7969
+
+[Quad Force RMSE]
+X [N]: 4.2148
+Y [N]: 1.4224
+Z [N]: 2.2635
+
+[Total Force RMSE]
+Load total [N]: 1.4980
+Quad total [N]: 4.9911
+

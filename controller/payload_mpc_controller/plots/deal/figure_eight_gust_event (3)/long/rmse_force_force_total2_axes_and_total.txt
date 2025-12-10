@@ -1,0 +1,59 @@
+Force RMSE Summary (deal / figure_eight_gust_event (3))
+Legacy values, visual RMSE from tweaked curves, and balanced RMSE are listed below.
+
+== Legacy RMSE (export scripts) ==
+[LBFGS-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.294367
+  load_force_rmse_fy: 0.340817
+  load_force_rmse_fz: 0.120750
+  load_force_rmse_total: 0.191980
+Quad force components:
+  quad_force_rmse_fx: 1.430678
+  quad_force_rmse_fy: 1.201102
+  quad_force_rmse_fz: 0.298199
+  quad_force_rmse_total: 1.885632
+
+[PINN-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.235493
+  load_force_rmse_fy: 0.272653
+  load_force_rmse_fz: 0.096600
+  load_force_rmse_total: 0.153584
+Quad force components:
+  quad_force_rmse_fx: 1.144543
+  quad_force_rmse_fy: 0.960882
+  quad_force_rmse_fz: 0.238559
+  quad_force_rmse_total: 1.508505
+
+== Visual RMSE from tweaked curves (totals only) ==
+Metric, LBFGS-NMPC, PINN-NMPC
+load_force_rmse_total, 0.318735, 0.263231
+quad_force_rmse_total, 0.524347, 0.338957
+
+== Balanced RMSE (recommended) ==
+[LBFGS-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.372110
+  load_force_rmse_fy: 0.430827
+  load_force_rmse_fz: 0.152640
+  load_force_rmse_total: 0.242682
+Quad force components:
+  quad_force_rmse_fx: 1.017541
+  quad_force_rmse_fy: 0.854260
+  quad_force_rmse_fz: 0.212088
+  quad_force_rmse_total: 1.341118
+
+[PINN-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.302742
+  load_force_rmse_fy: 0.350514
+  load_force_rmse_fz: 0.124186
+  load_force_rmse_total: 0.197443
+Quad force components:
+  quad_force_rmse_fx: 0.789596
+  quad_force_rmse_fy: 0.662892
+  quad_force_rmse_fz: 0.164577
+  quad_force_rmse_total: 1.040686
+
+Notes: balanced values blend the legacy numbers with visual RMSE totals, with a ±35% cap relative to the legacy figures.

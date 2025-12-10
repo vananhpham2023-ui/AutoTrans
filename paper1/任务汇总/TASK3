@@ -1,0 +1,1697 @@
+# 概述
+该文档记录在 AutoTrans 仿真栈中提取 PINN 所需数据集与相关自动化脚本，便于按阶段推进与复现。
+
+#轻度湍流
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,5.2,5.2]' wind_dryden_sigma:='[1.086,1.086,0.77]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+#中度湍流
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,5.2,5.2]' wind_dryden_sigma:='[2.171,2.171,1.54]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+#重度湍流
+roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.2,5.2,5.2]' wind_dryden_sigma:='[3.256,3.256,2.31]' wind_dryden_length_scale:='[420.0,420.0,300.0]'
+
+
+## 近期实现进展与变更记录（2025-11-05）
+
+- FSM 结束与 RViz 关闭稳定性
+  - 用 `pkill -SIGTERM` 替代 ROS 依赖的 `rosnode kill`，并在 C++ 侧用 `wait(2)` 宏解码 `std::system` 返回值：
+    - `WEXITSTATUS==0` 判定为成功；
+    - `WIFSIGNALED && WTERMSIG==SIGTERM`（`pkill` 自身被信号结束）视为“信号已发出”，同样判定成功；
+    - 其它情况才告警。
+  - 成功后保留 0.5 s 延迟，给 RViz 与 roslaunch 留出退出检测时间。
+
+- 事件驱动的批处理提前收敛（加速单场景周转）
+  - FSM 在解析轨迹完成（10 个周期）后发布一次性、latched 完成信号：绝对话题 `/mpc/run_completed`（修复了相对话题导致的命名空间偏移）。
+  - 新增辅助脚本 `wait_for_completion.py`（Rosrun 可调用）阻塞等待完成信号；失败会输出具体错误日志，便于排障。
+  - `batch_data_collection.py` 集成事件监听：
+    - 启动 roslaunch → 预热 → 启动 PINN 记录器 → 启动完成监听器；
+    - 监听器收到 `/mpc/run_completed` 立即触发对 roslaunch 的优雅终止；
+    - 仍保留 `--timeout` 作为兜底；
+    - 为避免静默失败，启动监听器后做一次 `poll()` 健康检查，若异常会在备注中标注并退回超时路径。
+  - 新增 CLI：`--completion-topic`（默认 `/mpc/run_completed`）。
+
+- force 对比图未生成的说明与建议
+  - 在关机序列较快时，`force_data_recorder` 可能正生成 PNG 而被上层 SIGTERM/SIGKILL 打断，导致仅有 CSV 无 PNG；
+  - 如需稳定产出 PNG，可在 `force_data_recorder` 增加 `~extra_wait_seconds` 或在 batch 中适当增大 `--recorder-grace`；
+  - 也可使用离线脚本 `plot_force_comparison.py` 对已有 CSV 进行补画。
+
+- 典型运行命令（带参数）
+  - 串行、完整集：
+    - `python3 src/AutoTrans/batch_data_collection.py --profile full --max-concurrency 1 --warmup 5 --timeout 420 --recorder-grace 30 --completion-topic /mpc/run_completed`
+  - 轻量检查：
+    - `python3 src/AutoTrans/batch_data_collection.py --profile lite --max-concurrency 1 --completion-topic /mpc/run_completed`
+
+- Checkpoint 与“从 0 开始”现象说明
+  - 默认断点文件：`controller/payload_mpc_controller/plots/batch_checkpoint.json`；
+  - 若切换到不同工作副本或指定了新的 `--checkpoint` 路径，会产生新的进度文件，看起来“从 0 开始”；
+  - 确认未使用 `--no-resume`，并保证本次场景选择与既有 checkpoint 匹配（`--profile/--scenarios/--include/--exclude/--config` 一致）。
+
+- 构建与环境
+  - C++ 变更后需 `catkin build payload_mpc_controller`（或 `catkin_make --pkg payload_mpc_controller`）并 `source devel/setup.bash`；
+  - 新增脚本 `wait_for_completion.py` 已加入 `catkin_install_python`，可 `rosrun payload_mpc_controller wait_for_completion.py` 调用。
+
+## 批量采集：场景覆盖与实验流程（论文复现实录）
+
+本文所用的数据集由脚本 `src/AutoTrans/batch_data_collection.py` 自动生成。该脚本在独立 ROS Master 上逐场景运行仿真，采集 PINN 训练所需变量与外力真值/估计值，并在解析轨迹完成后基于事件提前终止以提升吞吐。
+
+### 场景设计与命名
+
+1) 轨迹（TRAJECTORIES）
+- circle：半径 3.0 m，角速度 0.5 rad/s（周期约 12.57 s）
+- figure_eight：半径 3.0 m，角速度 0.3 rad/s（周期约 20.94 s）
+
+2) 纯湍流基线（PURE_TURBULENCE）
+- c1_low：σ = [0.6, 0.6, 0.3] m/s，长度尺度 = [12, 12, 6] m
+- c2_medium：σ = [1.5, 1.5, 0.5] m/s，长度尺度 = [18, 18, 9] m
+- c3_high：σ = [2.5, 2.5, 0.8] m/s，长度尺度 = [25, 25, 12] m
+
+3) 有平均风的组合（WIND_DIRECTIONS × SPEEDS × TURBULENCE_LEVELS）
+- 方向（6）：
+  - w1 horizontal_x = [V, 0, 0]
+  - w2 vertical     = [0, 0, V]
+  - w3 horizontal_diagonal = [V/√2, V/√2, 0]
+  - w4 ascending_oblique    = [V/√3, V/√3, V/√3]
+  - w5 biaxial_xy   = [V, V, 0]
+  - w6 descending_oblique = [V/√3, −V/√3, −V/√3]
+- 风速（3）：weak=2 m/s，medium=5 m/s，strong=9 m/s
+- 湍流等级（3）：low/medium/high（参数同上）
+
+4) 命名规范
+- 纯湍流：`<traj>.c{1|2|3}_{low|medium|high}`，如 `circle.c1_low`
+- 有平均风：`<traj>.<w{1..6}>_{weak|medium|strong}_{low|medium|high}`，如 `figure_eight.w4_strong_high`
+
+5) 场景数量
+- full 配置：每个轨迹 = 3（纯湍流）+ 6×3×3=54（定向）= 57；两条轨迹合计 114 个场景
+- lite 配置：每个轨迹 = 3 + 6×(2 风速：weak/strong)×(2 湍流：low/high)= 27；两条轨迹合计 54 个场景
+
+### 运行与提前终止策略
+
+- 预热：默认 5 s（`--warmup`）
+- 自动超时：按目标周期数（默认 10）× 轨迹周期 + `--timeout-margin`（默认 20 s）计算；作为兜底
+- 事件提前结束：FSM 在第 10 个周期收尾后发布一次性 latched 消息 `/mpc/run_completed`；batch 监听到后立刻优雅终止 roslaunch，并保留 `--recorder-grace`（默认 30 s）给记录器刷盘
+- 独立 ROS Master：为每个场景分配唯一端口，互不干扰
+
+### 数据产物与目录结构
+
+每个场景的输出位于：
+`controller/payload_mpc_controller/plots/run_<scenario>_<UTC>_<attempt>_<rand>/`
+
+- pinn/
+  - `pinn_dataset_<run_tag>.csv`
+  - 列包含（摘要）：
+    - 轨迹/风配置：`timestamp, scenario_id, trajectory_mode, wind_type`
+    - 飞行器状态：位置、速度、姿态部分元素（r13/r23/r33）、角速度、加速度
+    - 负载状态：位置、速度、加速度
+    - 系统参数：`motor_rpm_{1..4}, thrust_total, mass_quad, mass_load, l_length, sqrt_kf`
+    - 线缆方向：`cable_dir_{x,y,z}`
+    - 外力真值与估计：`fl_true_*, fq_true_*, fl_est_*, fq_est_*`
+    - 风速：`wind_{x,y,z}`
+  - 采样规模：以 circle 为例，10 个周期约 125–130 s，100 Hz 同步下约 12.5k 样本/场景
+
+- force/
+  - `force_<run_tag>.csv`（必有）与 `force_<run_tag>.png`（若关机序列足够宽松）
+  - 终端输出 RMSE 汇总：Load/Quad 各分量与合量
+
+- analytic/
+  - `analytic_xy_<run_tag>.csv/.png`：二维轨迹对齐对比与 RMSE 标注
+
+### figure-eight 专用 PINN 训练集（小规模代表场景）
+
+在批量采集的 100+ 个场景之外，论文中还使用了一组 **专门针对 figure-eight + 强风场** 的小规模代表场景，用于训练/评估在线力估计 PINN。  
+为了方便复现，提供独立脚本 `collect_figure_eight_dataset.py` 自动运行以下 5 个场景，并合并成单一数据集：
+
+- `figure_eight_turbulence_light`  ：复合风 + 轻度湍流（σ=[1.086,1.086,0.77]）  
+- `figure_eight_turbulence_medium` ：复合风 + 中度湍流（σ=[2.171,2.171,1.54]）  
+- `figure_eight_turbulence_heavy`  ：复合风 + 重度湍流（σ=[3.256,3.256,2.31]）  
+- `figure_eight_gradual_cycles`    ：gradual 周期开关风场（1 周期无风，2 上升，3–8 全幅，9 下降）  
+- `figure_eight_gust_event`        ：多阶段 gust_event 阵风 + Dryden（三轴湍流）  
+
+运行命令（从 catkin 工作区根目录）：
+
+```bash
+cd /home/wangshengkai/autotrans_ws
+source devel/setup.bash
+
+rosrun payload_mpc_controller collect_figure_eight_dataset.py \
+  --samples 150000 --warmup 8.0 --record-duration 45.0 \
+  --output-root src/AutoTrans/controller/payload_mpc_controller/plots/pinn_dataset
+```
+
+脚本行为：
+- 为上述 5 个场景依次启动 `controller_only.launch`（使用 LBFGS 力估计）+ `pinn_data_recorder.py`；  
+- 每个场景录制最多 `--samples` 行数据；  
+- 所有原始 CSV 存在 `plots/pinn_dataset/<scenario>/pinn/`；  
+- 在 `plots/pinn_dataset/clean_dataset.csv` 写出合并且清洗后的训练集。  
+
+该 `clean_dataset.csv` 即为 TASK9 中 “多场景 PINN 训练集” 的输入源文件。
+
+### 批处理日志与断点续跑
+
+- 日志：`plots/logs/`
+  - `launch_*.log`、`recorder_*.log`、`waiter_*.log`、`roscore_*.log`
+- 断点：`plots/batch_checkpoint.json`（可通过 `--checkpoint` 自定义路径）
+  - 默认启用 resume（未指定 `--no-resume`）；`--status-only` 可查看已完成/失败条目
+
+### 复现实验命令（示例）
+
+1) 完整集（full）串行：
+```
+python3 src/AutoTrans/batch_data_collection.py \
+  --profile full \
+  --max-concurrency 1 \
+  --warmup 5 \
+  --timeout 420 \
+  --recorder-grace 30 \
+  --completion-topic /mpc/run_completed
+```
+
+2) 轻量集（lite）串行：
+```
+python3 src/AutoTrans/batch_data_collection.py \
+  --profile lite \
+  --max-concurrency 1 \
+  --completion-topic /mpc/run_completed
+```
+
+3) 断点复用（跨目录）：
+```
+python3 src/AutoTrans/batch_data_collection.py \
+  --profile full \
+  --checkpoint /path/to/old/batch_checkpoint.json \
+  --completion-topic /mpc/run_completed
+```
+
+### 备注与经验
+
+- RViz 退出：已通过 `pkill` + 正确状态解码稳定处理；收到完成事件后通常 1–2 s 内结束场景
+- 力图 PNG：若关机较快可能缺失，增大 `--recorder-grace` 或事后用 `plot_force_comparison.py` 离线生成
+- 典型成功率：脚本自带重试（默认 2 次）；失败重试后大多数场景可收敛；详见 `batch_run_report.json`
+
+
+
+
+
+
+
+
+
+PINN 外力估计器数据集生成与训练方案
+
+  1. 数据集生成方案
+
+  1.1 场景组合设计
+
+  解析轨迹 × 风场条件组合（参数与 controller_only.launch 完全对应）：
+
+  轨迹参数模板（Trajectory Arguments）：
+  - T1 circle：`trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0`
+  - T2 figure_eight：`trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0`
+
+  风场参数设计（山区运输场景近似）：
+  - 平均风向（launch 参数保持 controller_only.launch 兼容）：
+    - 顺风：`[V, 0.0, 0.0]`
+    - 侧风：`[0.0, V, 0.0]`
+    - 斜向风：`[V/√2, V/√2, 0.0]`
+  - 湍流强度（Dryden 模型）依据实际山区风廊道经验校准：
+    - 弱扰动：σ = `[0.6, 0.6, 0.3]` m/s，长度尺度 = `[12.0, 12.0, 6.0]` m
+    - 中等扰动：σ = `[1.5, 1.5, 0.5]` m/s，长度尺度 = `[18.0, 18.0, 9.0]` m
+    - 强扰动：σ = `[2.5, 2.5, 0.8]` m/s，长度尺度 = `[25.0, 25.0, 12.0]` m
+  - 风速等级：
+    - 弱风：2 m/s（谷地微风）
+    - 中等风：5 m/s（标准山区运输）
+    - 强风：9 m/s（约 5 级风中值，满足用户要求）
+  - 记号说明：
+    - `C1~C3` 表示无平均风，仅干扰（方向无关，所有轨迹需运行）
+    - `顺风·X` / `侧风·X` / `斜向风·X` 表示同一风速/扰动组合在不同方向上的实现，分别给出 6 个有平均风的情景；三个方向共 18 个定向样本
+    - 因此每条轨迹包含 21 个场景（其中 18 个含平均风，共 54 个定向场景；另有 3 个纯湍流场景可作为基线）
+
+  Launch 命令模板（Dryden 统一建模，均匀分配随机种子便于复现实验）：
+
+  ● T1 circle
+    - C1 无风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.0,0.0,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 11}}'`
+    - C2 无风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.0,0.0,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 12}}'`
+    - C3 无风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.0,0.0,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 13}}'`
+    - 顺风·弱风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[2.000,0.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 111}}'`
+    - 顺风·中等风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.000,0.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 112}}'`
+    - 顺风·中等风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.000,0.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 113}}'`
+    - 顺风·强风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[9.000,0.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 114}}'`
+    - 顺风·强风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[9.000,0.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 115}}'`
+    - 顺风·强风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[9.000,0.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 116}}'`
+    - 侧风·弱风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,2.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 211}}'`
+    - 侧风·中等风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,5.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 212}}'`
+    - 侧风·中等风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,5.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 213}}'`
+    - 侧风·强风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,9.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 214}}'`
+    - 侧风·强风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,9.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 215}}'`
+    - 侧风·强风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,9.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 216}}'`
+    - 斜向风·弱风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[1.414,1.414,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 311}}'`
+    - 斜向风·中等风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[3.536,3.536,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 312}}'`
+    - 斜向风·中等风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[3.536,3.536,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 313}}'`
+    - 斜向风·强风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[6.364,6.364,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 314}}'`
+    - 斜向风·强风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[6.364,6.364,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 315}}'`
+    - 斜向风·强风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[6.364,6.364,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 316}}'`
+
+  ● T2 figure_eight
+    - C1 无风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.0,0.0,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 21}}'`
+    - C2 无风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.0,0.0,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 22}}'`
+    - C3 无风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.0,0.0,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 23}}'`
+    - 顺风·弱风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[2.000,0.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 121}}'`
+    - 顺风·中等风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.000,0.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 122}}'`
+    - 顺风·中等风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[5.000,0.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 123}}'`
+    - 顺风·强风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[9.000,0.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 124}}'`
+    - 顺风·强风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[9.000,0.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 125}}'`
+    - 顺风·强风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[9.000,0.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 126}}'`
+    - 侧风·弱风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,2.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 221}}'`
+    - 侧风·中等风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,5.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 222}}'`
+    - 侧风·中等风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,5.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 223}}'`
+    - 侧风·强风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,9.000,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 224}}'`
+    - 侧风·强风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,9.000,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 225}}'`
+    - 侧风·强风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[0.000,9.000,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 226}}'`
+    - 斜向风·弱风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[1.414,1.414,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 321}}'`
+    - 斜向风·中等风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[3.536,3.536,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 322}}'`
+    - 斜向风·中等风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[3.536,3.536,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 323}}'`
+    - 斜向风·强风+弱扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[6.364,6.364,0.0]' wind_dryden_sigma:='[0.6,0.6,0.3]' wind_dryden_length_scale:='[12.0,12.0,6.0]' wind_override_yaml:='{dryden: {seed: 324}}'`
+    - 斜向风·强风+中等扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[6.364,6.364,0.0]' wind_dryden_sigma:='[1.5,1.5,0.5]' wind_dryden_length_scale:='[18.0,18.0,9.0]' wind_override_yaml:='{dryden: {seed: 325}}'`
+    - 斜向风·强风+强扰动：`roslaunch payload_planner controller_only.launch trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 wind_type:=composite wind_constant_velocity:='[6.364,6.364,0.0]' wind_dryden_sigma:='[2.5,2.5,0.8]' wind_dryden_length_scale:='[25.0,25.0,12.0]' wind_override_yaml:='{dryden: {seed: 326}}'`
+
+  统计：每条轨迹 21 个场景（18 个定向风场 + 3 个纯湍流），合计 42 个组合，其中 ？ 个涵盖有平均风的山区运输情景。
+
+Task9 手动采集执行清单（T1/T2/特殊场景）
+----------------------------------------------------------------------
+
+说明（与 TASK9 对齐）：  
+下面已经把 **每一个场景** 的 `roslaunch` 命令（终端 B）和 `pinn_data_recorder.py` 命令（终端 C）都写好，并且：
+- 已经带上绝对路径的 `mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml`；  
+- 已经填好 `run_label` / `PINN_SCENARIO_ID` / `AUTOTRANS_RUN_TAG` 中的场景 ID。  
+
+你只需要按场景顺序，**复制对应的终端 B + 终端 C 命令运行，然后在方框里打勾即可**，不需要再自己改任何占位符。
+
+### T1 circle：21 个场景
+
+- [1 ] **T1_circle_01 — C1 无风+弱扰动**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.0,0.0,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[12.0,12.0,6.0]' \
+    wind_override_yaml:='{dryden: {seed: 11}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_01
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_01 AUTOTRANS_RUN_TAG=T1_circle_01 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [2] **T1_circle_02 — C2 无风+中等扰动**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.0,0.0,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 12}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_02
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_02 AUTOTRANS_RUN_TAG=T1_circle_02 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [3] **T1_circle_03 — C3 无风+强扰动**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.0,0.0,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 13}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_03
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_03 AUTOTRANS_RUN_TAG=T1_circle_03 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [4] **T1_circle_04 — 顺风·弱风+弱扰动（seed 111）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[2.000,0.000,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[12.0,12.0,6.0]' \
+    wind_override_yaml:='{dryden: {seed: 111}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_04
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_04 AUTOTRANS_RUN_TAG=T1_circle_04 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T1_circle_05 — 顺风·中等风+中等扰动（seed 112）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[5.000,0.000,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 112}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_05
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_05 AUTOTRANS_RUN_TAG=T1_circle_05 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [6] **T1_circle_06 — 顺风·中等风+强扰动（seed 113）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[5.000,0.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 113}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_06
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_06 AUTOTRANS_RUN_TAG=T1_circle_06 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_07 — 顺风·强风+弱扰动（seed 114）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[9.000,0.000,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[12.0,12.0,6.0]' \
+    wind_override_yaml:='{dryden: {seed: 114}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_07
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_07 AUTOTRANS_RUN_TAG=T1_circle_07 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_08 — 顺风·强风+中等扰动（seed 115）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[9.000,0.000,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 115}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_08
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_08 AUTOTRANS_RUN_TAG=T1_circle_08 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_09 — 顺风·强风+强扰动（seed 116）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[9.000,0.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 116}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_09
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_09 AUTOTRANS_RUN_TAG=T1_circle_09 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_10 — 侧风·弱风+弱扰动（seed 211）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,2.000,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[12.0,12.0,6.0]' \
+    wind_override_yaml:='{dryden: {seed: 211}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_10
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_10 AUTOTRANS_RUN_TAG=T1_circle_10 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_11 — 侧风·中等风+中等扰动（seed 212）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,5.000,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 212}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_11
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_11 AUTOTRANS_RUN_TAG=T1_circle_11 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_12 — 侧风·中等风+强扰动（seed 213）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,5.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 213}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_12
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_12 AUTOTRANS_RUN_TAG=T1_circle_12 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_13 — 侧风·强风+弱扰动（seed 214）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,9.000,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[12.0,12.0,6.0]' \
+    wind_override_yaml:='{dryden: {seed: 214}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_13
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_13 AUTOTRANS_RUN_TAG=T1_circle_13 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_14 — 侧风·强风+中等扰动（seed 215）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,9.000,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 215}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_14
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_14 AUTOTRANS_RUN_TAG=T1_circle_14 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T1_circle_15 — 侧风·强风+强扰动（seed 216）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,9.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 216}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_15
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_15 AUTOTRANS_RUN_TAG=T1_circle_15 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T1_circle_16 — 斜向风·弱风+弱扰动（seed 311）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[1.414,1.414,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[12.0,12.0,6.0]' \
+    wind_override_yaml:='{dryden: {seed: 311}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_16
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_16 AUTOTRANS_RUN_TAG=T1_circle_16 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T1_circle_17 — 斜向风·中等风+中等扰动（seed 312）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[3.536,3.536,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 312}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_17
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_17 AUTOTRANS_RUN_TAG=T1_circle_17 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T1_circle_18 — 斜向风·中等风+强扰动（seed 313）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[3.536,3.536,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 313}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_18
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_18 AUTOTRANS_RUN_TAG=T1_circle_18 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_19 — 斜向风·强风+弱扰动（seed 314）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[6.364,6.364,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[12.0,12.0,6.0]' \
+    wind_override_yaml:='{dryden: {seed: 314}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_19
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_19 AUTOTRANS_RUN_TAG=T1_circle_19 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T1_circle_20 — 斜向风·强风+中等扰动（seed 315）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.5 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[6.364,6.364,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 315}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_20
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_20 AUTOTRANS_RUN_TAG=T1_circle_20 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T1_circle_21 — 斜向风·强风+强扰动（seed 316）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=circle circle_radius:=3.0 circle_omega:=0.8 \
+    circle_center_x:=0.0 circle_center_y:=0.0 circle_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[6.364,6.364,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 316}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T1_circle_21
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T1_circle_21 AUTOTRANS_RUN_TAG=T1_circle_21 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+### T2 figure_eight：21 个场景
+
+- [1] **T2_fig8_01 — C1 无风+弱扰动（seed 21）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.0,0.0,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[120.0,120.0,60.0]' \
+    wind_override_yaml:='{dryden: {seed: 21}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_01
+  ``` 
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_01 AUTOTRANS_RUN_TAG=T2_fig8_01 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_02 — C2 无风+中等扰动（seed 22）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.0,0.0,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 22}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_02
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_02 AUTOTRANS_RUN_TAG=T2_fig8_02 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_03 — C3 无风+强扰动（seed 23）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.0,0.0,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 23}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_03
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_03 AUTOTRANS_RUN_TAG=T2_fig8_03 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T2_fig8_04 — 顺风·弱风+弱扰动（seed 121）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[2.000,0.000,0.0]' \
+    wind_dryden_sigma:='[0.6,0.6,0.3]' \
+    wind_dryden_length_scale:='[250.0,250.0,420.0]' \
+    wind_override_yaml:='{dryden: {seed: 121}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_04
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_04 AUTOTRANS_RUN_TAG=T2_fig8_04 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1 ] **T2_fig8_05 — 顺风·中等风+中等扰动（seed 122）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[5.000,0.000,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:='{dryden: {seed: 122}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_05
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_05 AUTOTRANS_RUN_TAG=T2_fig8_05 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_06 — 顺风·中等风+强扰动（seed 123）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[5.000,0.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 123}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_06
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_06 AUTOTRANS_RUN_TAG=T2_fig8_06 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T2_fig8_07 — 顺风·强风+弱扰动（seed 124）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[9.000,0.000,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:='{dryden: {seed: 124}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_07
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_07 AUTOTRANS_RUN_TAG=T2_fig8_07 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_08 — 顺风·强风+中等扰动（seed 125）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[9.000,0.000,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 125}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_08
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_08 AUTOTRANS_RUN_TAG=T2_fig8_08 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_09 — 顺风·强风+强扰动（seed 126）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[9.000,0.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 126}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_09
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_09 AUTOTRANS_RUN_TAG=T2_fig8_09 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_10 — 侧风·弱风+弱扰动（seed 221）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,2.000,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:='{dryden: {seed: 221}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_10
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_10 AUTOTRANS_RUN_TAG=T2_fig8_10 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T2_fig8_11 — 侧风·中等风+中等扰动（seed 222）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,5.000,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:='{dryden: {seed: 222}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_11
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_11 AUTOTRANS_RUN_TAG=T2_fig8_11 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_12 — 侧风·中等风+强扰动（seed 223）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,5.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 223}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_12
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_12 AUTOTRANS_RUN_TAG=T2_fig8_12 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T2_fig8_13 — 侧风·强风+弱扰动（seed 224）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,9.000,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:='{dryden: {seed: 224}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_13
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_13 AUTOTRANS_RUN_TAG=T2_fig8_13 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_14 — 侧风·强风+中等扰动（seed 225）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,9.000,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 225}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_14
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_14 AUTOTRANS_RUN_TAG=T2_fig8_14 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_15 — 侧风·强风+强扰动（seed 226）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[0.000,9.000,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 226}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_15
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_15 AUTOTRANS_RUN_TAG=T2_fig8_15 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T2_fig8_16 — 斜向风·弱风+弱扰动（seed 321）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[1.414,1.414,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:='{dryden: {seed: 321}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_16
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_16 AUTOTRANS_RUN_TAG=T2_fig8_16 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T2_fig8_17 — 斜向风·中等风+中等扰动（seed 322）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[3.536,3.536,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:='{dryden: {seed: 322}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_17
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_17 AUTOTRANS_RUN_TAG=T2_fig8_17 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_18 — 斜向风·中等风+强扰动（seed 323）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[3.536,3.536,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    wind_override_yaml:='{dryden: {seed: 323}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_18
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_18 AUTOTRANS_RUN_TAG=T2_fig8_18 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [1] **T2_fig8_19 — 斜向风·强风+弱扰动（seed 324）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[7.0,7.0,0.0]' \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_21
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_21 AUTOTRANS_RUN_TAG=T2_fig8_21 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_20 — 斜向风·强风+中等扰动（seed 325）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[6.364,6.364,0.0]' \
+    wind_dryden_sigma:='[1.5,1.5,0.5]' \
+    wind_dryden_length_scale:='[18.0,18.0,9.0]' \
+    wind_override_yaml:='{dryden: {seed: 325}}' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_20
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_20 AUTOTRANS_RUN_TAG=T2_fig8_20 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] **T2_fig8_21 — 斜向风·强风+强扰动（seed 326）**
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.3 \
+    figure_center_x:=0.0 figure_center_y:=0.0 figure_altitude:=2.0 \
+    wind_type:=composite \
+    wind_constant_velocity:='[6.364,6.364,0.0]' \
+    wind_dryden_sigma:='[2.5,2.5,0.8]' \
+    wind_dryden_length_scale:='[25.0,25.0,12.0]' \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=T2_fig8_21
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=T2_fig8_21 AUTOTRANS_RUN_TAG=T2_fig8_21 \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+### 两个特殊 figure_eight 场景（gradual_cycles & gust_event）
+
+- [ ] SP_fig8_gradual_cycles — 渐变周期开关风场
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    wind_type:=gust_event \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:="{gust_event: {axis: [1.0,1.0,0.0], magnitude: 9.5, start_time: 5.0, hold_duration: 1.0, rise_time: 13.0, fall_time: 13.0, multi_stage: false}}" \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=SP_fig8_gradual_cycles
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=SP_fig8_gradual_cycles AUTOTRANS_RUN_TAG=SP_fig8_gradual_cycles \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+- [ ] SP_fig8_gust_event — 多阶段 gust_event 阵风 + Dryden
+
+  终端 B：
+
+  ```bash
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    wind_type:=gust_event \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:="{gust_event: {axis: [1.0,1.0,0.0], magnitude: 5, start_time: 8.0, hold_duration: 20.0, rise_time: 1.3, fall_time: 1.3, axis2: [1.0,1.0,0.0], magnitude2: 9.0, hold_duration2: 20.0, rise_time2: 1.3, fall_time2: 1.3, multi_stage: true}}" \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+    run_label:=SP_fig8_gust_event
+  ```
+
+  终端 C：
+
+  ```bash
+  PINN_SCENARIO_ID=SP_fig8_gust_event AUTOTRANS_RUN_TAG=SP_fig8_gust_event \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+----------------------------------------------------------------------
+  2. 数据格式与特征工程设计
+
+  2. 数据格式与特征工程设计
+   2.1 扩展数据记录器以收集PINN训练数据
+  需要创建一个新的数据记录器 pinn_data_recorder.py，记录以下信息：
+
+  输入特征（与当前估计器对齐）：
+  # 载机状态（来自 /visual_slam/odom 和 /drone_imu/data）
+  - quad_pos: [x, y, z]                    # 位置
+  - quad_vel: [vx, vy, vz]                 # 速度
+  - quad_quat: [R13，R23，R33]             # 旋转矩阵第1行第3列、第2行第3列、第3行第3列的元素
+  - quad_omega: [wx, wy, wz]               # 角速度（来自IMU）
+  - quad_acc_body: [ax, ay, az]            # 加速度（机体系，来自IMU）
+
+  # 负载状态（来自 /payload_odom 和 /load_imu/data）
+  - load_pos: [x, y, z]
+  - load_vel: [vx, vy, vz]
+  - load_acc_body: [ax, ay, az]
+
+  # 缆绳信息（来自 /cable_info/data）
+  - cable_dir: [nx, ny, nz]                # 单位方向向量
+
+  # 参数常量（从config读取，每个场景记录一次）
+  - mass_quad, mass_load, L_length, sqrt_kf
+
+  输出标签（Ground Truth）：
+  - fl_true: [fx, fy, fz]                  # 负载外力真值
+  - fq_true: [fx, fy, fz]                  # 载机外力真值
+
+  辅助信息（用于分析和对比）：
+  - wind: [wx, wy, wz]                     # 风速（如果启用）
+  - fl_est_lbfgs: [fx, fy, fz]            # L-BFGS估计值（基线对比）
+  - fq_est_lbfgs: [fx, fy, fz]
+
+  2.2 数据预处理策略
+
+  # 归一化方案（基于物理范围）
+  position: [-10, 10] m → [-1, 1]
+  velocity: [-5, 5] m/s → [-1, 1]
+  quaternion: 保持单位范数（无需归一化）
+  angular_velocity: [-3, 3] rad/s → [-1, 1]
+  acceleration: [-20, 20] m/s² → [-1, 1]
+  cable_dir: 单位向量（无需归一化）
+  force: [-30, 30] N → [-1, 1]
+
+  # 时序特征工程（如果使用历史窗口）
+  window_size = 10  # 0.1秒历史（100Hz）
+  stride = 1        # 滑动步长
+
+  3. PINN网络架构建议
+● 3.1 PINN架构设计（两种方案）
+  方案A：物理约束损失型MLP（推荐用于baseline）
+  网络结构：
+  Input (dim=37): [quad_state(16) + load_state(16) + cable_dir(3) + thrust(1) + params(1)]
+    ↓
+  Hidden Layer 1 (128) + LayerNorm + ReLU + Dropout(0.1)
+    ↓
+  Hidden Layer 2 (128) + LayerNorm + ReLU + Dropout(0.1)
+    ↓
+  Hidden Layer 3 (64) + LayerNorm + ReLU
+    ↓
+  Output (6): [fl_x, fl_y, fl_z, fq_x, fq_y, fq_z]
+
+  损失函数：
+  L_total = λ_data * L_data + λ_physics * L_physics
+  L_data = MSE(fl_pred, fl_true) + MSE(fq_pred, fq_true)
+  L_physics = 物理残差的平方和：
+    # 从加速度推导的系统总力
+    F_total_measured = m_q * a_q + m_l * a_l - T_vec
+    # 从估计外力推导的总力
+    F_total_estimated = fl_pred + fq_pred
+    # 物理一致性损失
+    L_physics = ||F_total_measured - F_total_estimated||²
+
+  超参数：
+  λ_data = 1.0, λ_physics = 0.1（可调）
+
+  优点：
+  - 结构简单，易于训练和调试
+  - 计算高效（~0.1ms推理时间）
+  - 物理约束作为软约束，允许噪声
+
+  缺点：
+  - 不能保证严格满足物理定律
+
+  方案B：时序PINN（LSTM/GRU，用于捕捉动态）
+
+  Input sequence (window_size=10, dim=37)
+    ↓
+  LSTM/GRU Layer (hidden=64, layers=2)
+    ↓
+  取最后时刻输出 → MLP (64→32→6)
+    ↓
+  Output (6): [fl, fq]
+
+  损失函数：同方案A
+
+  超参数：
+  window_size = 10 (0.1秒历史)
+
+  优点：
+  - 捕捉系统动态和历史依赖
+  - 可能对快速机动更鲁棒
+
+  缺点：
+  - 推理时间较长（~1-2ms）
+  - 需要维护历史窗口
+
+  推荐策略：
+  1. 第一阶段： 方案A（快速验证可行性）
+  2. 第二阶段： 方案B（提升性能）
+  3. 最终对比： 两种方案 + L-BFGS基线
+
+  3.2 网络实现框架建议
+
+  框架选择：DeepXDE
+  部署优化：
+  - ONNX导出 → C++推理（onnxruntime）
+  - TorchScript（如果用PyTorch）
+  - 量化（INT8）以加速推理
+
+  4. 训练和评估流程
+● 4.1 数据集划分策略
+  # 按场景划分（避免数据泄漏）
+  训练集（70%）：约27个场景
+    - 所有轨迹类型
+    - 无风 + 多种恒风 + 部分阵风/Dryden
+  验证集（15%）：约6个场景
+    - 所有轨迹类型
+    - 未见过的风场参数组合
+  测试集（15%）：约6个场景
+    - 所有轨迹类型
+    - 极端风场条件（测试泛化性）
+    - 包含未见轨迹参数（如不同半径的circle）
+
+  # 时序数据划分注意事项
+  - 不要跨场景切分（保持场景完整性）
+  - 每个场景内可以滑动窗口采样
+  - 确保测试集风场类型多样性
+
+  4.2 训练流程
+  # 1. 数据加载与预处理
+  - 读取所有场景CSV
+  - 归一化输入/输出
+  - 生成滑动窗口（如果用LSTM）
+
+  # 2. 训练配置
+  optimizer: Adam
+  learning_rate: 1e-3（初始） → 1e-5（后期）
+  batch_size: 256
+  epochs: 100-200
+  early_stopping: patience=20（基于验证集RMSE）
+  # 3. 学习率调度
+  ReduceLROnPlateau(factor=0.5, patience=10)
+
+  # 4. 监控指标
+  - 训练损失：L_total, L_data, L_physics
+  - 验证RMSE：fl_rmse, fq_rmse（分轴和总）
+  - 物理残差：平均物理违反程度
+
+  # 5. 实验跟踪
+  使用 Weights & Biases (wandb) 或 TensorBoard 记录：
+  - 损失曲线
+  - RMSE vs epoch
+  - 不同风场条件下的性能
+  - 推理时间统计
+
+  4.3 评估指标体系
+
+  # 离线评估（在测试集上）
+  1. 外力估计精度
+     - RMSE (总体和分轴)：fl_rmse_x/y/z, fq_rmse_x/y/z
+     - MAE (平均绝对误差)
+     - Max Error (最大误差)
+
+  2. 物理一致性
+     - Physics Residual: ||F_total_measured - F_estimated||
+     - 动量守恒违反度
+
+  3. 不同条件下的鲁棒性
+     - 按风场类型分组的RMSE
+     - 按轨迹类型分组的RMSE
+     - 快速机动阶段 vs 平稳飞行阶段
+
+  4. 计算性能
+     - 单次推理时间（mean, std, p99）
+     - 吞吐量（samples/sec）
+     - 模型大小（参数量，内存占用）
+
+  # 在线闭环评估（重要！）
+  5. 闭环控制性能（将PINN集成到MPC控制器）
+     - 轨迹跟踪RMSE（位置、速度）
+     - 控制输入平滑度
+     - 有风扰动下的鲁棒性
+     - 与L-BFGS基线的对比
+
+  6. 收敛特性
+     - 从零初始化到稳态的收敛时间
+     - 风场突变后的适应速度
+
+  4.4 对比实验设计
+
+  基线方法：
+  1. L-BFGS多窗口估计器（当前默认，主要基线）
+  2. 闭式分解力估计器（下限基线）
+  3. 零估计（无估计器，测试影响）
+  4. 真值外力（性能上限）
+
+  PINN变体：
+  1. PINN-MLP（方案A）
+  2. PINN-LSTM（方案B）
+  3. Vanilla NN（无物理约束，消融实验）
+
+  评估维度：
+  - 准确度：RMSE对比
+  - 实时性：推理时间对比
+  - 鲁棒性：不同风场条件下的性能分布
+  - 闭环性能：控制质量对比
+
+  5. 部署和实时推理方案
+
+● 5.1 模型导出与优化
+
+  5.2 C++ ROS节点集成
+  选项A：创建新的PINN估计器类（推荐）
+
+  选项B：Python ROS节点（快速原型）
+
+  5.3 集成到现有控制器
+
+  5.4 性能监控和调优
+
+  6. 完整实施路线图
+
+● 阶段1：数据采集
+  ├─ Week 1
+  │  ├─ 编写 pinn_data_recorder.py（扩展现有记录器）
+  │  │    - 状态：已完成。脚本默认订阅 /visual_slam/odom、/imu、/load_imu、/payload_odom、/cable_info、/rpm、/so3_quadrotor/true_force、/mpc_controller_node/mpc/force，输出 CSV 至 payload_mpc_controller/plots/pinn_dataset（可用 PINN_DATA_OUTPUT、PINN_SCENARIO_ID 覆盖）。
+  │  │    - 待办：在 controller_only.launch 中新增 pinn_data_recorder 节点或使用 rosrun 手动执行，验证 39 组场景输出。
+  │  ├─ 编写 batch_data_collection.py（自动化批量运行）
+  │  ├─ 单元测试：手动运行2-3个场景验证数据完整性
+  │  └─ 运行完整39场景数据采集（后台运行）
+  │
+  └─ Week 2
+     ├─ 数据质量检查：缺失值、异常值、同步性
+     ├─ 数据统计分析：绘制输入/输出分布，确定归一化参数
+     └─ 数据集划分：train/val/test split
+
+  阶段2：模型开发
+  ├─ Week 3
+  │  ├─ 搭建PyTorch训练框架（数据加载、训练循环）
+  │  ├─ 实现PINN-MLP（方案A）+ 物理损失函数
+  │  ├─ 在小数据子集上验证训练可行性
+  │  └─ 超参数搜索：学习率、λ_physics、网络深度/宽度
+  │
+  ├─ Week 4
+  │  ├─ 完整训练PINN-MLP
+  │  ├─ 实现PINN-LSTM（方案B）
+  │  ├─ 对比实验：MLP vs LSTM vs Vanilla NN
+  │  └─ 离线评估：RMSE、物理残差、推理时间
+  │
+  └─ Week 5
+     ├─ 消融实验：不同物理损失权重、不同输入特征组合
+     └─ 模型压缩：剪枝、量化
+
+  阶段3：部署集成
+  ├─ Week 6
+  │  ├─ 模型导出：DeepXDE
+  │  ├─ 选择部署方案：C++节点 或 Python节点
+  │  ├─ 实现推理接口：PINNForceEstimator类
+  │  └─ 单元测试：推理正确性、性能基准
+  │
+  └─ Week 7
+     ├─ 集成到 mpc_controller_node
+     ├─ 配置文件更新：mpc.yaml添加PINN选项
+     ├─ 离线闭环测试：用录制的bag文件回放
+     └─ 性能调优：内存优化、推理加速
+
+  阶段4：验证与对比
+  └─ Week 8
+     ├─ 在线仿真对比实验
+     │  ├─ PINN vs L-BFGS（不同风场条件）
+     │  ├─ 轨迹跟踪性能对比
+     │  └─ 计算资源占用对比（CPU、内存）
+     ├─ 生成对比图表和论文数据
+     └─ 撰写技术报告/论文初稿
+
+  阶段5：论文实验
+  └─ Week 9-10
+     ├─ 补充实验：鲁棒性测试、泛化性测试
+     ├─ 可视化：训练曲线、误差热图、轨迹对比图
+     ├─ 消融研究：物理约束的作用、历史窗口的作用
+     └─ 论文撰写与投稿
+
+  7. 关键风险与缓解措施
+
+  风险1：PINN训练不稳定（物理损失和数据损失冲突）
+  缓解：
+  - 从纯数据损失开始，逐步增加物理损失权重（curriculum learning）
+  - 使用自适应权重：λ_physics = λ_0 * (L_data / L_physics)
+
+  风险2：实时性不满足（推理超过41ms）
+  缓解：
+  - 使用MLP而非LSTM（MLP通常<1ms）
+  - 模型剪枝和量化
+  - GPU加速（如果机载计算机有GPU）
+
+  风险3：泛化性不足（训练集外风场性能差）
+  缓解：
+  - 增加数据多样性（更多风场组合）
+  - 数据增强：在训练时添加噪声
+  - 正则化：Dropout、L2惩罚
+
+  风险4：闭环性能不如L-BFGS
+  缓解：
+  - 混合策略：PINN用于快速初估 + L-BFGS用于精细优化
+  - 在线微调：在飞行中持续学习（高级）
+  - 分析失败案例，针对性改进物理约束
+
+  8. 预期成果与论文贡献点
+  技术贡献：
+  1. 首次将PINN应用于四旋翼-负载系统外力估计
+  2. 物理约束的显式建模提升泛化性
+  3. 实时性与准确性的平衡（与传统优化方法对比）
+
+  实验验证：
+  1. 多风场条件下的鲁棒性验证
+  2. 与L-BFGS基线的全面对比
+  3. 闭环控制性能提升的定量分析
+
+  论文结构建议：
+  I. Introduction
+     - 外力估计在载荷控制中的重要性
+     - 现有方法的局限性（计算复杂度 vs 准确性）
+     - PINN的优势和本文贡献
+
+  II. Problem Formulation
+     - 四旋翼-负载系统动力学模型
+     - 外力估计问题定义
+     - 物理约束方程
+
+  III. PINN-Based Force Estimator
+     - 网络架构设计
+     - 物理约束损失函数
+     - 训练策略
+
+  IV. Experiments
+     - 数据集描述
+     - 离线评估：RMSE、物理残差
+     - 在线闭环评估：轨迹跟踪性能
+     - 对比实验：PINN vs L-BFGS vs 闭式
+
+  V. Conclusion & Future Work
+     - 在线学习和自适应
+     - 真实硬件验证

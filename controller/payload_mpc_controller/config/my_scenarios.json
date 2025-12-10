@@ -1,0 +1,21 @@
+{
+  "scenarios": [
+    {
+      "name": "figure_eight_gust_event",
+      "args": {
+        "trajectory_mode": "figure_eight",
+        "figure_center_x": 0.0,
+        "figure_center_y": 0.0,
+        "figure_altitude": 2.64,
+        "figure_radius": 3.0,
+        "figure_omega": 0.8,
+        "wind_type": "gust_event",
+        "wind_dryden_sigma": [3.256, 3.256, 2.31],
+        "wind_dryden_length_scale": [42.0, 42.0, 30.0],
+        "wind_dryden_bandwidth": 10.0,
+        "wind_dryden_seed": 123,
+        "wind_override_yaml": "{gust_event: {axis: [1.0,1.0,0.0], magnitude: 5, start_time: 1.0, hold_duration: 5.0, rise_time: 0.1, fall_time: 0.1, axis2: [1.0,1.0,0.0], magnitude2: 10.0, hold_duration2: 8.0, rise_time2: 0.1, fall_time2: 0.1, multi_stage: true}}"
+      }
+    }
+  ]
+}

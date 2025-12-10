@@ -1,0 +1,186 @@
+'''
+总体目标
+
+取消对规划器的依赖，在控制器端直接生成圆形、八字与螺旋上升三类期望轨迹；运行时仅展示无人机-负载模型，移除 RViz 障碍物图层。
+保持原有规划器模式可选，使解析轨迹与规划器轨迹可互换，便于对比与未来扩展。
+通过参数化配置、解析轨迹接口封装与 launch/可视化调整，形成易维护、易调试的控制-only 流程。
+架构与参数设计
+
+mpc.yaml 增加 reference 参数段：use_planner、mode（circle/figure_eight/helix）及各自的半径、角速度、中心、海拔/升速等参数，默认保持旧行为（use_planner: true）。
+MpcParams 新增 ReferenceConfig 结构，在 config_from_ros_handle 中读取并校验参数范围（半径>0、角速度>0、螺旋圈数>0 等），提供友好日志；use_planner=false 时校验 mode 合法性。
+reference_generator 模块（新建 reference_generator.h/.cpp）定义抽象类 AnalyticTrajectory（接口：sample(double t) 返回 3×6 PVAJSC 矩阵、getDuration()、reset(double start_t)），并提供 CircleTrajectory、FigureEightTrajectory、HelixTrajectory 三个实现，包含精确的一至五阶导数计算。
+MpcController 增加 setAnalyticReference(std::function<Eigen::Matrix<double,3,6>(double)> trajectory_fn, double tstart, double start_yaw) 重载；原多项式接口保持不变。解析轨迹分支中使用回调获取 PVAJSC，保持 yaw 规划/负载平坦化逻辑一致。
+控制器与 FSM 调整
+
+mpc_controller_node.cpp 在 MpcParams 装载后根据 reference_config 构造对应的 AnalyticTrajectory（std::unique_ptr），注入 MPCFSM；仅当 use_planner=true 时创建 traj/cmd 订阅者并保留规划器相关发布。
+MPCFSM 增加成员 std::unique_ptr<AnalyticTrajectory> analytic_traj_、ros::Time analytic_start_time_、Exec_Traj_State_t::ANALYTIC。在 CMD_CTRL_process 中新增解析轨迹分支：traj_time=(now-analytic_start_time_).toSec()，调用 controller_.setAnalyticReference(...) 并执行 MPC；ROS_INFO_THROTTLE 定期输出当前模式和轨迹时间。
+悬停到解析轨迹切换时、外部触发/模式重置时调用 analytic_traj_->reset 并刷新 analytic_start_time_，避免轨迹时间漂移；若用户再次切回规划器模式，沿用原 POLY_TRAJ 流程。
+Launch 与 RViz 配置
+
+replan.launch 增加 <arg name="use_planner" default="true"/>、<arg name="trajectory_mode" default="circle"/> 及轨迹参数覆写；对地图/规划节点使用 <group if="$(arg use_planner)"> 条件包裹。mpc_controller_node 节点中设置 <param name="reference/use_planner" value="$(arg use_planner)"/> 等参数，同时通过条件 remap 保持兼容。
+新增 controller_only.rviz：禁用 Planning 组和 SimulationMap 点云，只保留无人机-负载相关 Marker/Path；rviz.launch 支持 <arg name="config" ...>，根据 use_planner 选择加载 sim_vis.rviz 或 controller_only.rviz。
+推荐新增 controller_only.launch，直接启动控制器+模拟器+精简 RViz，便于展示解析轨迹。
+实现要点与代码示例
+
+圆轨迹 PVAJSC 示例：
+
+Eigen::Matrix<double,3,6> CircleTrajectory::sample(double t) const {
+  double theta = omega_ * (t - start_time_);
+  double c = std::cos(theta), s = std::sin(theta);
+  Eigen::Matrix<double,3,6> out;
+  out.col(0) << center_.x() + radius_ * c, center_.y() + radius_ * s, altitude_;
+  out.col(1) << -radius_ * omega_ * s, radius_ * omega_ * c, 0.0;
+  out.col(2) << -radius_ * sqr(omega_) * c, -radius_ * sqr(omega_) * s, 0.0;
+  out.col(3) << radius_ * cube(omega_) * s, -radius_ * cube(omega_) * c, 0.0;
+  out.col(4) << radius_ * quart(omega_) * c, radius_ * quart(omega_) * s, 0.0;
+  out.col(5) << -radius_ * quint(omega_) * s, radius_ * quint(omega_) * c, 0.0;
+  return out;
+}
+其余轨迹依公式推导：八字采用 x=R sin(ωt), y=R sin(ωt) cos(ωt) 并按链式求导；螺旋增加线性升高项 z = base_altitude + vertical_rate * (t-start)，高阶导数仅在 z 维出现常量或零。
+
+setAnalyticReference 中遍历预测步数：pvajs = analytic_fn(t); payload_flat_.forward_p(...);，保持 calculate_yaw、力估计补偿逻辑。
+
+Launch 条件示例：
+
+<arg name="use_planner" default="true"/>
+<group if="$(arg use_planner)">
+  <node pkg="map_generator" .../>
+  <include file="$(find payload_planner)/launch/planning_node_params.xml">...</include>
+</group>
+<node pkg="payload_mpc_controller" type="mpc_controller_node" name="mpc_controller_node" output="screen">
+  <param name="reference/use_planner" value="$(arg use_planner)"/>
+  <param name="reference/mode" value="$(arg trajectory_mode)"/>
+  <group if="$(arg use_planner)">
+    <remap from="~traj" to="planning/trajectory"/>
+    <remap from="~cmd" to="planning/cmd"/>
+  </group>
+</node>
+测试与验证
+
+编译：catkin build，确保新增 reference_generator.cpp 被纳入构建；在 use_planner=false 场景下无未定义引用。
+功能测试：分别以 trajectory_mode=circle/figure_eight/helix 启动，检查 /mpc/reference_trajectory 与 /mpc/trajectory_predicted 话题；确认无人机-负载路径符合预期（可在 RViz 中查看或录制 bag 验证 P、V 曲线）。
+回归：use_planner=true 时完整启动规划流程，确保旧消息路径正常工作；切换模式后能稳定返回悬停状态。
+视觉确认：加载 controller_only.rviz 时无遮挡点云，Controller 组 Marker 正常显示；在 sim_vis.rviz 下保持旧效果。
+建议补充单元测试：针对解析轨迹输出数值与理论值对比（特别是高阶导数），可在 C++ GTest 或 Python 脚本中实现。
+审查反馈与修正要点
+
+数据接口：解析轨迹与多项式轨迹类型不兼容，需通过 setAnalyticReference(std::function<…>) 重载解决，避免强制转换。
+FSM 状态：补充 Exec_Traj_State_t::ANALYTIC，并在状态日志中区分轨迹来源；保证 analytic_start_time_ 重置时机（切换至解析轨迹、外部触发、模式变更）。
+轨迹公式：修正八字轨迹参数化及高阶导数推导，避免压缩失真；文档中给出完整 PVAJSC 计算示例。
+Launch 条件：使用 <group if="..."> 明确控制规划器、地图节点启动时机；代码侧按 use_planner 控制订阅者创建。
+RViz 配置：在 controller_only.rviz 中明确禁用 Planning 组、SimulationMap 点云，仅保留无人机-负载相关渲染。
+参数校验：config_from_ros_handle 中对解析轨迹参数进行范围检查，异常情况下 ROS_ERROR 并 ROS_BREAK。
+优先级：P0（接口、公式）> P1（高阶导数、订阅者实现）> P2（FSM 状态）> P3（RViz、参数验证）；编码前先处理 P0/P1。
+
+
+
+阶段 0：总体目标与现状复盘
+
+目标：控制器端生成圆形、八字、螺旋三类解析轨迹，切换 use_planner 实现规划器/解析轨迹双模式；运行时 RViz 仅展示无人机-负载模型。
+现状：mpc_controller 当前依赖规划器发布的 PolynomialTraj；sim_vis.rviz 显示障碍物；无解析轨迹框架。
+阶段 1：参数体系与配置落地
+
+mpc.yaml 新增 reference 配置段（use_planner、mode、各轨迹参数）。
+MpcParams 中新增 ReferenceConfig 结构及字段读取；完善范围校验、错误提示、默认值。
+单元：config_from_ros_handle 读取 + 校验 + 日志。
+
+完成记录：
+- 已在 `controller/payload_mpc_controller/config/mpc.yaml` 添加 reference 块，提供圆、八字、螺旋的默认参数并保持 use_planner: true 的旧行为。
+- 已在 `controller/payload_mpc_controller/include/payload_mpc_controller/mpc_params.h` 中定义 ReferenceConfig 结构、访问接口，并在 `config_from_ros_handle` 里完成参数读取、归一化和正数校验（非法取值回退默认并打印警告）。
+
+测试建议：
+- 运行 `rosparam load controller/payload_mpc_controller/config/mpc.yaml` 或通过 `roslaunch` 启动节点，观察日志中 `[MPC][reference] use_planner=..., mode=...` 是否符合预期并无警告。
+- 手动修改参数为非法值（如 radius: -1），再次加载配置，确认日志输出回退提示且最终值恢复默认。
+阶段 2：解析轨迹生成器实现
+
+新建 reference_generator.h/.cpp，定义 AnalyticTrajectory 抽象接口及 Circle/FigureEight/HelixTrajectory 实现，提供精确 PVAJSC（位置、速度、加速度、Jerk、Snap、Crackle）。
+构造函数读取参数，reset 记录起始时间。
+推导关键导数公式：x=R sin ωt, y=R sin ωt cos ωt、螺旋 Z 维线性项求导。
+
+刚才完成的工作：
+- 新建 `controller/payload_mpc_controller/include/payload_mpc_controller/reference_generator.h`，声明解析轨迹抽象接口及圆/八字/螺旋三类实现，统一返回 3×6 PVAJSC 采样矩阵。
+- 新建 `controller/payload_mpc_controller/src/reference_generator.cpp`，推导并实现精确的一至五阶导数、起始时间 reset 逻辑，以及螺旋轨迹的有限圈时长处理。
+- 更新 `controller/payload_mpc_controller/CMakeLists.txt`，将解析轨迹源文件纳入 mpc_controller_node 构建。
+
+测试方法：
+- 执行 `catkin build payload_mpc_controller`，验证工程在引入解析轨迹模块后能够正常编译链接。
+- 编写临时 ROS 节点或 Python 测试脚本实例化各轨迹对象，调用 `sample(t)` 与 `reset(start)` 检查 t=0、t=π/(2ω) 等关键时刻 PVAJSC 数值、以及 reset 后时间偏移是否符合解析公式。
+阶段 3：控制器接口与 FSM 改造
+
+MpcController：
+新增 setAnalyticReference(std::function<Eigen::Matrix<double,3,6>(double)> fn, double tstart, double start_yaw) 重载，复用平坦化与 yaw 规划。
+保留 setTrajectoyReference 多项式接口以兼容旧流程。
+MPCFSM：
+扩展成员 std::unique_ptr<AnalyticTrajectory> analytic_traj_、ros::Time analytic_start_time_，新增枚举 Exec_Traj_State_t::ANALYTIC。
+CMD_CTRL_process 中依据 use_planner 分支执行解析轨迹：traj_time=(now-analytic_start_time_)，调用 setAnalyticReference，并通过 ROS_INFO_THROTTLE 输出模式信息。
+在解析轨迹切换、外部触发或模式重置时调用 analytic_traj_->reset 刷新起始时间。
+
+刚才完成的工作：
+- 新增 `controller/payload_mpc_controller/include/payload_mpc_controller/mpc_controller.h` 与 `src/mpc_controller.cpp` 的解析轨迹接口 `setAnalyticReference`，沿用平坦化与 yaw 规划并保持输入约束。
+- 在 `controller/payload_mpc_controller/include/payload_mpc_controller/mpc_fsm.h`/`src/mpc_fsm.cpp` 引入 ANALYTIC 执行模式、解析轨迹指针与起始时间管理，并在 `CMD_CTRL_process` 中按 `use_planner` 自动切换。
+- 提供 `setAnalyticTrajectory` 与 `resetAnalyticStart` 辅助函数，保证悬停与解析模式切换时时间轴复位。
+
+测试方法：
+- 设置 `reference/use_planner:=false` 启动控制器，观察日志是否打印 “HOVER --> ANALYTIC” 及解析轨迹时间的 ROS_INFO_THROTTLE，同时确认 `/mpc/reference_trajectory` 发布正常。
+- 手动恢复 `use_planner:=true` 或调 `resetAnalyticStart`，验证 FSM 回落 HOVER 后再次进入 ANALYTIC，过渡平滑且日志提示正确。
+阶段 4：节点启动与依赖关系调整
+
+mpc_controller_node.cpp：
+- 读取 ReferenceConfig 后按模式实例化 AnalyticTrajectory 并注入 FSM。
+- use_planner=false 时跳过规划器话题订阅与停止相关发布。
+
+Launch 文件：
+- replan.launch 新增 use_planner/trajectory 参数与解析轨迹覆盖，使用条件 group/remap 管理地图/规划节点，并向控制器写入 reference 参数。
+- rviz.launch 支持 config 选择，根据 use_planner 加载 sim_vis.rviz 或 controller_only.rviz。
+- 新增 controller_only.rviz 精简控制视图，新增 controller_only.launch 快速启动控制器+模拟器流程。
+
+① 刚才完成的工作：
+- 在 `controller/payload_mpc_controller/src/mpc_controller_node.cpp` 中读取参考配置，按模式创建解析轨迹，use_planner=false 时停止规划器话题订阅并禁用相关发布。
+- 更新 `planner/plan_manage/launch/replan.launch` 支持 use_planner/trajectory 参数、条件 remap，并将解析参数写入节点。
+- 扩展 `planner/plan_manage/launch/rviz.launch` 以按 use_planner 选择配置，新增 `controller_only.rviz` 与 `controller_only.launch` 便于演示解析轨迹流程。
+
+② 测试方法：
+- 执行 `catkin build payload_mpc_controller`，确认解析轨迹工厂与新节点参数均能正确编译链接。
+- 执行 `roslaunch payload_planner controller_only.launch trajectory_mode:=helix`，确认控制日志进入 ANALYTIC 模式且 RViz 仅显示控制相关曲线。
+- 执行 `roslaunch payload_planner replan.launch use_planner:=true trajectory_mode:=circle`，验证规划模式仍可用；随后将 use_planner 置为 false，确认订阅发布切换和解析参数覆盖生效。
+阶段 5：RViz 可视化精简
+
+controller_only.rviz：
+- 基于 sim_vis.rviz 精简保留 Grid 以及 MPC 参考/预测路径、负载轨迹和力 Marker，移除 Planning 组与 SimulationMap 点云。
+- 调整默认 Orbit 视角与白色背景，聚焦无人机-负载状态，方便解析轨迹调试。
+
+rviz.launch：
+- 通过 config 参数在 use_planner=false 时加载 controller_only.rviz，use_planner=true 时沿用 sim_vis.rviz。
+- 维持单一 RViz 节点定义，避免重复 launch 配置。
+
+刚才完成的工作：
+- 新建 `planner/plan_manage/launch/controller_only.rviz`，保留控制相关 Path/Marker 并设置适合解析调试的视角、背景。
+- 更新 `planner/plan_manage/launch/rviz.launch` 支持按 use_planner 切换配置，并在 `controller_only.launch` 中默认指向精简视图。
+
+测试方法：
+- 执行 `roslaunch payload_planner controller_only.launch trajectory_mode:=helix`，确认 RViz 仅加载 Controller 相关显示，无 Planning/SimulationMap 元素。
+- 执行 `roslaunch payload_planner replan.launch use_planner:=false`，验证 rviz.launch 自动切换至 controller_only.rviz；随后设置 use_planner:=true 确认为 sim_vis.rviz。
+阶段 6：测试与验证
+
+刚才完成的工作：
+- `catkin build payload_mpc_controller` 验证控制器及解析轨迹模块在工作空间内可正常编译。
+- 新增 `controller/payload_mpc_controller/test/reference_generator_test.cpp` 覆盖圆/八字/螺旋解析轨迹的 PVAJSC 公式、终端冻结与 `reset()` 行为；对应的 CMake 调整测试目标的 include 路径并显式链接 `gtest_main`。
+- 通过 `catkin build payload_mpc_controller --no-deps --catkin-make-args reference_generator_test` 生成测试二进制，执行 `devel/.private/payload_mpc_controller/lib/payload_mpc_controller/reference_generator_test` 获取 3/3 PASS。
+- `MPCFSM::publishPrediction` 维护参考轨迹历史并发布 `mpc/reference_geometry` MarkerArray，RViz 中仅展示当前（实际/预测）无人机、载荷、缆绳模型，同时保留完整参考路径。
+- `finalizeAnalyticRun()` 在解析模式运行 10 个周期后自动统计 RMSE、导出 `plots/analytic_xy.csv` 与 `plots/analytic_xy.png` 并通过桌面默认程序打开图像，日志同步输出 RMSE。
+- `controller_only.launch` 默认同步模拟器初始状态到解析轨迹起点，`controller_only.rviz`/`sim_vis.rviz` 调整 ForceMarker 类型并加入 Geometry 显示项。
+
+测试方法：
+- 依赖准备：`sudo apt install python3-setuptools`，保证 `catkin` 命令可用。
+- 编译：`catkin build payload_mpc_controller`（或 `catkin build`）确认解析轨迹代码纳入构建。
+- 单元测试：`catkin build payload_mpc_controller --no-deps --catkin-make-args reference_generator_test`，随后运行 `devel/.private/payload_mpc_controller/lib/payload_mpc_controller/reference_generator_test`，核对 3/3 PASS。
+- 仿真验证（执行前 `source ~/autotrans_ws/devel/setup.bash`）：
+  - `roslaunch payload_planner controller_only.launch trajectory_mode:=circle|figure_eight|helix`，对比 `/mpc/reference_trajectory` 与 `/mpc/trajectory_predicted` 及 RViz 曲线。运行约 10 个周期后关注控制节点日志中的“ANALYTIC RMSE”输出，记录无人机与载荷的轨迹跟踪误差。
+  - `roslaunch payload_planner replan.launch use_planner:=true`，验证模式切换与悬停恢复。
+  - `roslaunch payload_planner rviz.launch use_planner:=false` 与 `use_planner:=true`，确认 `Geometry` MarkerArray 中仅展示实际/预测模型，参考路径保持完整。
+
+阶段 7：审查反馈与后续优化
+
+已纳入审查指摘内容：接口重载、FSM 新状态、参数校验、launch 条件、RViz 禁用项、轨迹公式/高阶导数修正。
+优先级顺序：P0（接口、公式）> P1（高阶导数、订阅者实现）> P2（状态枚举）> P3（可视化、参数验证）。
+后续可选优化：dynamic_reconfigure 热更新、轨迹切换平滑过渡、CI 自动化测试、高阶控制性能统计等。

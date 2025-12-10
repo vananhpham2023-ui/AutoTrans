@@ -1,0 +1,426 @@
+TASK9：多场景数据集 + 新 PINN 模型（从零开始的完整流程）
+============================================================
+
+目标：不再只用“单一风场”的数据训练 PINN，而是用一组 **更丰富的 figure_eight 场景**（多方向风 + 渐变风 + 阵风），重新训练一个 PINN 模型，再重新接回 AutoTrans 做对比。
+
+写法依旧是“傻瓜式步骤”——只要按顺序执行并打勾即可。
+
+约定：
+- Catkin 工作区：`/home/wangshengkai/autotrans_ws`
+- deepxde 工程：`/home/wangshengkai/deepxde`
+- 所有命令默认在对应目录下执行（每步前面会写清楚 `cd`）
+
+----------------------------------------------------------------------
+一、前置条件（只做一次）
+----------------------------------------------------------------------
+
+- [ ] **1.1 编译并 source 工程**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+  catkin build payload_mpc_controller
+  source devel/setup.bash
+  ```
+
+  只要编译成功即可。
+
+- [ ] **1.2 确认 `pinn_data_recorder.py` 可用**
+
+  检查文件是否存在：
+
+  ```bash
+  ls src/AutoTrans/controller/payload_mpc_controller/scripts/pinn_data_recorder.py
+  ```
+
+如果能看到这个文件，就可以继续。
+
+二、采集多场景 PINN 训练数据（手动方案，不用 batch_data_collection.py）
+----------------------------------------------------------------------
+
+核心思路：  
+- 一律使用 **LBFGS 控制器**（`lbfgs_nmpc.yaml`）跑仿真，保证轨迹稳定；  
+- 用 `pinn_data_recorder.py` 录制训练数据，只作为“数据记录器”，**不启用 PINN 控制**；  
+- 场景覆盖：
+  - TASK3 里的 T1 circle（21 个场景）；  
+  - TASK3 里的 T2 figure_eight（21 个场景）；  
+  - TASK8/TASK3 里的 2 个特殊 figure_eight 场景：  
+    - `figure_eight_gradual_cycles`（渐变周期开关风场）  
+    - `figure_eight_gust_event`（多阶段 gust_event 阵风 + Dryden）
+
+总共 44 个场景。每个场景只飞 5 个周期（你已经在 `mpc.yaml` 里调过），每次大约 40–50 秒。
+
+----------------------------------------------------------------------
+2.1 启动 roscore（只做一次）
+----------------------------------------------------------------------
+
+- [ ] **2.1.1 终端 A：启动 ROS Master**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+  source devel/setup.bash
+  roscore
+  ```
+
+  这个终端 A 一直保持打开，后面所有仿真都依赖它。
+
+----------------------------------------------------------------------
+2.2 每个场景的固定操作流程
+----------------------------------------------------------------------
+
+下面的步骤，对于每一个场景都一样，只是命令中的风场参数和 `run_label` / `PINN_SCENARIO_ID` 不同。
+
+终端 B：启动仿真（LBFGS 控制）
+
+- [ ] **2.2.1 新开终端 B，准备环境**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+  source devel/setup.bash
+  ```
+
+- [ ] **2.2.2 在终端 B 里粘贴对应场景的 `roslaunch ...` 命令**
+
+  所有场景命令的最后，都要加上这两项（指定控制配置 + 场景标签）：
+
+  ```bash
+  mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml \
+  run_label:=<场景ID>
+  ```
+
+  例如：`run_label:=T1_circle_01`。  
+  按回车后，等待无人机起飞并进入比较稳定的轨迹。
+
+终端 C：启动数据记录器
+
+- [ ] **2.2.3 新开终端 C，准备环境**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+  source devel/setup.bash
+  ```
+
+- [ ] **2.2.4 在终端 C 启动 `pinn_data_recorder.py`**
+
+  ```bash
+  PINN_SCENARIO_ID=<场景ID> AUTOTRANS_RUN_TAG=<场景ID> \
+    rosrun payload_mpc_controller pinn_data_recorder.py
+  ```
+
+  注意：这里的 `<场景ID>` 必须和终端 B 中 `run_label:=<场景ID>` 完全一致，例如 `T1_circle_01`。
+
+  记录器启动后，它会每次在 true force 到来时对齐所有传感器数据，并写入一个 CSV 到：
+
+  ```text
+  src/AutoTrans/controller/payload_mpc_controller/plots/pinn_dataset/
+    pinn_dataset_<场景ID>_YYYYMMDD_HHMMSS.csv
+  ```
+
+- [ ] **2.2.5 等待 5 个周期飞完**
+
+  由于 `mpc.yaml` 已经把周期数调整为 5 个，你只需要大约等 40–50 秒。  
+  如果期间无人机表现正常，就不用管，等到 5 周期结束、你觉得“这一段数据可以接受”即可。
+
+结束与检查
+
+- [ ] **2.2.6 结束记录器和仿真**
+
+  - 在终端 C 按 `Ctrl + C`，结束 `pinn_data_recorder.py`；  
+  - 在终端 B 按 `Ctrl + C`，结束 `roslaunch`。
+
+- [ ] **2.2.7 检查是否生成了 CSV**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/pinn_dataset
+  ls
+  ```
+
+  如果能看到类似 `pinn_dataset_T1_circle_01_2025...csv` 这样的文件，说明该场景采集成功，可以在 TASK9 里对该场景打勾。
+
+- [ ] **2.2.8（如有）处理失控 / 明显跑飞的场景**
+
+  如果无人机在飞行中严重失控、绳长约束被破坏等：
+  - 立刻在终端 C 和终端 B 同时 `Ctrl + C` 结束；  
+  - 这一趟数据当作失败，不要用于训练（如果已经写出了 CSV，可以把对应的 `pinn_dataset_*.csv` 删掉）；  
+  - 在 TASK9 场景列表旁边记一笔“该场景失败一次”。  
+
+  某个场景如果你多次尝试都不稳定，可以考虑以后训练时不必强行包含这个场景，把对应 CSV 删除即可。
+
+----------------------------------------------------------------------
+2.3 场景列表与命令模板（在 TASK3 中维护）
+----------------------------------------------------------------------
+
+为保持本任务说明简洁，**所有 44 个场景的具体 `roslaunch` + `pinn_data_recorder.py` 命令模板，统一整理在 `TASK3` 中**。本节只作为“提醒你跑哪些场景”的清单：
+
+- [ ] **2.3.1 在 TASK3 中按表依次跑完 T1 circle 21 个场景**
+
+  参考 `TASK3` 中 “T1 circle / Task9 手动采集执行清单”：
+  - 每个条目包含：
+    - 对应的 `roslaunch payload_planner controller_only.launch ...` 命令（已带绝对路径 `mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/mpc.yaml` 和 `run_label:=T1_circle_XX`）；  
+    - 终端 C 使用的 `pinn_data_recorder.py` 启动命令（`PINN_SCENARIO_ID=T1_circle_XX AUTOTRANS_RUN_TAG=T1_circle_XX ...`）。  
+  - 你只需要在 TASK3 里按顺序跑完并打勾。
+
+- [ ] **2.3.2 在 TASK3 中按表依次跑完 T2 figure_eight 21 个场景**
+
+  参考 `TASK3` 中 “T2 figure_eight / Task9 手动采集执行清单”：
+  - 同样每个条目已经给出了完整 `roslaunch` + `pinn_data_recorder.py` 命令，以及场景 ID `T2_fig8_XX`。
+
+- [ ] **2.3.3 在 TASK3 中跑完 2 个特殊 figure_eight 场景（gradual_cycles & gust_event）**
+
+  参考 `TASK3` 中 “SP_fig8_gradual_cycles / SP_fig8_gust_event” 条目：
+  - 每个条目包含专用的风场参数、绝对路径 `mpc.yaml`、以及匹配的 `PINN_SCENARIO_ID` / `AUTOTRANS_RUN_TAG` 命令。
+
+所有场景采集完成后，确认 `pinn_dataset` 目录下已经有对应的 `pinn_dataset_<场景ID>_*.csv` 文件，然后继续执行下一节的数据合并。
+
+----------------------------------------------------------------------
+2.4 采集完成后的确认与下一步
+----------------------------------------------------------------------
+
+- [1] **2.4.1（可选）快速统计 CSV 数量**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots
+  find pinn_dataset -maxdepth 2 -name 'pinn_dataset_*.csv' | wc -l
+  ```
+
+  数量大致接近你成功采集的场景数即可（比如 40 左右）。
+
+- [1] **2.4.2 删除明确失控场景的 CSV（如果有）**
+
+  找到这些 CSV 并 `rm` 掉，它们就不会出现在后面的合并数据集中。
+
+完成以上步骤后，回到本文件的第三节。
+
+三、合并多场景 CSV 为一个 clean_dataset（Task9 v2）
+
+- [ ] **3.1 使用 merge_pinn_datasets.py 合并所有 pinn_dataset_*.csv**
+
+  脚本：`src/AutoTrans/controller/payload_mpc_controller/scripts/merge_pinn_datasets.py`
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+
+  python3 src/AutoTrans/controller/payload_mpc_controller/scripts/merge_pinn_datasets.py \
+    --roots src/AutoTrans/controller/payload_mpc_controller/plots/pinn_dataset \
+    --output src/AutoTrans/controller/payload_mpc_controller/plots/pinn_dataset/clean_dataset_task9_v2.csv
+  ```
+
+  结束时会打印类似：
+  `"[merge_pinn_datasets] 合并 XX 个 CSV，最终有效样本 YYYYY 行 → ...clean_dataset_task9_v2.csv"`
+
+- [ ] **3.2 简单看一眼行数（可选）**
+
+  ```bash
+  wc -l clean_dataset_task9_v2.csv
+  ```
+  行数 > 100000 就非常充足。
+
+- [ ] **3.3 拷贝到 deepxde 数据目录**
+
+  ```bash
+  cp src/AutoTrans/controller/payload_mpc_controller/plots/pinn_dataset/clean_dataset_task9_v2.csv \
+     /home/wangshengkai/deepxde/estimation/datasets/clean_dataset_task9_v2.csv
+  ```
+
+----------------------------------------------------------------------
+四、在 deepxde 中转换 + 清洗新数据集
+----------------------------------------------------------------------
+
+### 4.1 用 convert_clean_dataset.py 转成标准格式
+
+- [ ] **4.1.1 运行转换脚本**
+
+  ```bash
+  cd /home/wangshengkai/deepxde/estimation/datasets
+
+  python3 convert_clean_dataset.py \
+    --input clean_dataset_task9_v2.csv \
+    --output force_estimation_task9_v2_raw.csv
+  ```
+
+  正常情况下会打印：
+  `"[convert_clean_dataset] Wrote XXXXX rows to force_estimation_task9_v2_raw.csv"`
+
+### 4.2 用清洗脚本移除 NaN / Inf / 异常推力
+
+（我们之前已经写过 `clean_force_estimation_csv.py`，这里继续使用）
+
+- [ ] **4.2.1 运行清洗脚本**
+
+  ```bash
+  cd /home/wangshengkai/deepxde
+
+  python3 -m estimation.datasets.clean_force_estimation_csv \
+    --input estimation/datasets/force_estimation_task9_v2_raw.csv \
+    --output estimation/datasets/force_estimation_task9_v2.csv
+  ```
+
+  期望输出类似：
+  `"[clean_force_estimation] 输入 XXXXX 行，移除 XXX 行非法样本，保留 YYYYY 行 → .../force_estimation_task9_v2.csv"`
+
+----------------------------------------------------------------------
+五、用新数据训练新的 PINN 模型（Task9 v2）
+----------------------------------------------------------------------
+
+### 5.1 清理旧缓存（如果存在）
+
+- [ ] **5.1.1 删除旧的 norm/dataset 缓存（有就删、没有就忽略）**
+
+  ```bash
+  cd /home/wangshengkai/deepxde
+  rm -f normalizer_stats_task9_v2.pkl dataset_cache_task9_v2.pkl
+  ```
+
+### 5.2 训练
+
+- [ ] **5.2.1 启动训练（使用新数据 force_estimation_task9_v2.csv）**
+
+  ```bash
+  cd /home/wangshengkai/deepxde
+
+  DDE_BACKEND=pytorch python3 -m estimation.force_estimation \
+    --data estimation/datasets/force_estimation_task9_v2.csv \
+    --clip-quantiles 0 1 \
+    --norm-cache normalizer_stats_task9_v2.pkl \
+    --dataset-cache dataset_cache_task9_v2.pkl \
+    --sample-size 200000 \
+    --metrics-csv logs/training_metrics_task9_v2.csv --metrics-period 100 \
+    --residual-variance-path logs/residual_variance_task9_v2.csv \
+    --residual-metrics-path logs/residual_metrics_task9_v2.csv \
+    --residual-plot-dir logs/residual_plots_task9_v2 \
+    --train-plot-dir logs --train-plot-prefix train_plot_task9_v2 \
+    --export-torchscript exports/force_estimation_task9_v2.pt \
+    --export-metadata exports/force_estimation_task9_v2_meta.json \
+    --export-normalizer exports/normalizer_stats_task9_v2.json \
+    --single-checkpoint
+  ```
+
+  检查：
+  - 日志里不要出现 NaN（第一行 Train loss / Test loss 都是正常数字）；  
+  - 训练结束时，关键文件应出现：
+    - `exports/force_estimation_task9_v2.pt`
+    - `exports/normalizer_stats_task9_v2.json`
+
+----------------------------------------------------------------------
+六、生成 C++ 使用的 normalizer_stats_task9_v2.json
+----------------------------------------------------------------------
+
+虽然 deepxde 已经导出了一个 `exports/normalizer_stats_task9_v2.json`，但 C++ 端 PINN 估计器使用的是 AutoTrans 自己的 JSON 结构（min/max 数组）。我们继续用之前的 `compute_normalizer_stats.py`，直接基于训练用 CSV 生成一份新的 normalizer。
+
+- [ ] **6.1 调用 compute_normalizer_stats（指向新数据）**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+
+  python3 src/AutoTrans/controller/payload_mpc_controller/scripts/compute_normalizer_stats.py \
+    /home/wangshengkai/deepxde/estimation/datasets/force_estimation_task9_v2.csv \
+    --output src/AutoTrans/controller/payload_mpc_controller/models/normalizer_stats_task9_v2.json \
+    --pretty
+  ```
+
+  完成后会显示：
+  `Wrote normalizer statistics to src/AutoTrans/controller/payload_mpc_controller/models/normalizer_stats_task9_v2.json`
+
+----------------------------------------------------------------------
+七、把新 PINN 模型接回 AutoTrans（pinn_nmpc.yaml）
+----------------------------------------------------------------------
+
+我们给新的模型路径起一个明确名字，避免和旧模型混在一起。
+
+- [ ] **7.1 拷贝 TorchScript 模型到 AutoTrans 源码目录**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+
+  cp /home/wangshengkai/deepxde/exports/force_estimation_task9_v2.pt \
+     src/AutoTrans/force_estimation_task9_v2.pt
+  ```
+
+- [ ] **7.2 修改 `pinn_nmpc.yaml` 让它使用新模型 + 新 normalizer**
+
+  文件：`src/AutoTrans/controller/payload_mpc_controller/config/pinn_nmpc.yaml`  
+  在 `force_estimator.pinn` 下面改成：
+
+  ```yaml
+  force_estimator: # *
+    type: pinn
+    ...
+    pinn:
+      model_path: /home/wangshengkai/autotrans_ws/src/AutoTrans/force_estimation_task9_v2.pt
+      normalizer_path: /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/models/normalizer_stats_task9_v2.json
+      ema_alpha: 0.8         # 建议先用 0.8 做轻微平滑
+      failover_threshold: 15
+  ```
+
+  其余 force_estimator 参数（`max_force`, `max_queue`, `var_weight` 等）先保持你当前已经验证可用的配置。
+
+- [ ] **7.3 重新编译并 source**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+  catkin build payload_mpc_controller
+  source devel/setup.bash
+  ```
+
+----------------------------------------------------------------------
+八、在线验证（gust_event + gradual 两个主场景）
+----------------------------------------------------------------------
+
+下面步骤与之前类似，只是确认新 PINN 在“多场景训练 + 延迟启用”的设置下表现如何。
+
+### 8.1 figure_eight_gust_event（阵风）
+
+- [ ] **8.1.1 运行仿真（使用 pinn_nmpc.yaml）**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+  source devel/setup.bash
+
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    wind_type:=gust_event \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:="{gust_event: {axis: [1.0,1.0,0.0], magnitude: 5, start_time: 5.0, hold_duration: 10.0, rise_time: 1.5, fall_time: 1.5, axis2: [1.0,1.0,0.0], magnitude2: 9.0, hold_duration2: 10.0, rise_time2: 1.5, fall_time2: 1.5, multi_stage: true}}" \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/pinn_nmpc.yaml \
+    run_label:=run_pinn_fe_gust_event_v2
+
+    
+  ```
+
+
+  观察：
+  - 起步阶段前几秒仍由 L‑BFGS 控制（我们在 C++ 里做了延迟启用 PINN），不会立刻跑飞；  
+  - 阵风开始后姿态和高度振荡是否在可接受范围；  
+  - 运行结束后，`plots/run_pinn_fe_gust_event_v2/...` 下会有新的 RMSE 统计和力误差图。
+
+### 8.2 figure_eight_gradual（渐变风）
+
+- [ ] **8.2.1（可选）按 TASK8 中命令跑渐变风场对比**
+
+  ```bash
+  cd /home/wangshengkai/autotrans_ws
+  source devel/setup.bash
+
+  roslaunch payload_planner controller_only.launch \
+    trajectory_mode:=figure_eight figure_radius:=3.0 figure_omega:=0.8 \
+    wind_type:=gust_event \
+    wind_dryden_sigma:='[3.256,3.256,2.31]' \
+    wind_dryden_length_scale:='[420.0,420.0,300.0]' \
+    wind_override_yaml:="{gust_event: {axis: [1.0,1.0,0.0], magnitude: 8.0, start_time: 11.0, hold_duration: 1.0, rise_time: 13.0, fall_time: 13.0, multi_stage: false}}" \
+    mpc_config:=/home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/config/pinn_nmpc.yaml \
+    run_label:=pinn_fe_gust_event_v2
+  ```
+  如果论文里还需要渐变风对比，命令与 8.1 类似，只是 wind 配置改为渐变风（`wind_type:=gradual` 并按 TASK8 中已经写好的参数设置）。  
+  建议在完成 8.1 后再跑一组渐变风仿真，`run_label` 换一个新名字，后续在绘图脚本中把这一组一起画进对比图。
+
+----------------------------------------------------------------------
+九、论文写作时如何解释“新旧 PINN”的区别（阅读即可）
+----------------------------------------------------------------------
+
+- [ ] **9.1 写论文时参考以下要点区分新旧 PINN（仅阅读）**
+
+  - 旧 PINN：只用单一场景（或极少数）数据训练，对特定场景拟合得很好，但泛化性有限；  
+  - 新 PINN（Task9 v2）：基于多方向风 + 渐变风 + 阵风的组合数据训练，对整体风场分布有更好的覆盖；  
+  - 论文中建议以 **Task9 v2 的结果为主**，旧 PINN 可以作为对比或附录，说明“单场景 training 的上界效果”。  
+
+  这样整个方案既保证了技术上的合理性（多场景训练），又避免了“只在原场景上训练再回测”的过拟合质疑。

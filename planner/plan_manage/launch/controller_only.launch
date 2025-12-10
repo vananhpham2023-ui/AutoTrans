@@ -1,0 +1,152 @@
+<launch>
+  <arg name="trajectory_mode" default="circle"/>
+  <arg name="circle_radius" default="5.0"/>
+  <arg name="circle_omega" default="0.5"/>
+  <arg name="circle_center_x" default="0.0"/>
+  <arg name="circle_center_y" default="0.0"/>
+  <arg name="circle_altitude" default="2.0"/>
+  <arg name="figure_radius" default="5.0"/>
+  <arg name="figure_omega" default="0.5"/>
+  <arg name="figure_center_x" default="0.0"/>
+  <arg name="figure_center_y" default="0.0"/>
+  <arg name="figure_altitude" default="2.0"/>
+  <arg name="helix_radius" default="4.0"/>
+  <arg name="helix_omega" default="0.4"/>
+  <arg name="helix_center_x" default="0.0"/>
+  <arg name="helix_center_y" default="0.0"/>
+  <arg name="helix_base_altitude" default="1.5"/>
+  <arg name="helix_vertical_rate" default="0.4"/>
+  <arg name="helix_revolutions" default="3.0"/>
+  <arg name="init_x" default="2.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_z" default="2.0"/>
+  <arg name="wind_type" default="none"/>
+  <arg name="wind_constant_velocity" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_gust_axis" default="[1.0,0.0,0.0]"/>
+  <arg name="wind_dryden_sigma" default="[0.0,0.0,0.0]"/>
+  <arg name="wind_dryden_length_scale" default="[50.0,50.0,20.0]"/>
+  <arg name="wind_override_yaml" default="{}"/>
+  <!-- Gradual mean-wind ramp -->
+  <arg name="wind_gradual_enabled" default="false"/>
+  <arg name="wind_gradual_start_time" default="0.0"/>
+  <arg name="wind_gradual_stop_time" default="0.0"/>
+  <arg name="wind_gradual_cycle_profile_enabled" default="false"/>
+  <arg name="wind_gradual_ramp_up_time" default="0.004"/>
+  <arg name="wind_gradual_ramp_down_time" default="0.004"/>
+  <!-- Wind window (hard on/off gate) -->
+  <arg name="wind_window_enabled" default="false"/>
+  <arg name="wind_window_auto_from_cycle" default="false"/>
+  <arg name="wind_window_skip_cycles" default="0"/>
+  <arg name="wind_window_active_cycles" default="0"/>
+  <arg name="wind_window_cycle_time" default="0.0"/>
+  <arg name="wind_window_start_time" default="$(arg warmup_trim)"/>
+  <arg name="wind_window_stop_time" default="0.0"/>
+  <!-- Analytics / recording warmup trim (seconds ignored before analytics/export) -->
+  <arg name="warmup_trim" default="0.0"/>
+  <arg name="analytic_target_cycles" default="3"/>
+
+  <!-- Scenario presets -->
+  <arg name="scenario" default="custom"/>
+  <arg name="trajectory_preset" default="$(eval ('custom' if arg('scenario')=='custom' or '.' not in arg('scenario') else arg('scenario').split('.',1)[0]))"/>
+  <arg name="wind_preset" default="$(eval ('custom' if arg('scenario')=='custom' or '.' not in arg('scenario') else arg('scenario').split('.',1)[1]))"/>
+
+  <!-- Run tagging & output layout -->
+  <arg name="payload_mpc_controller_dir" default="$(find payload_mpc_controller)"/>
+  <arg name="run_label" default="$(eval arg('scenario') if arg('scenario')!='custom' else 'manual')"/>
+  <arg name="run_label_clean" default="$(eval ''.join([c if (c.isalnum() or c in '-_') else '-' for c in arg('run_label')]))"/>
+  <arg name="run_seed" default="$(anon run)"/>
+  <arg name="run_tag" default="$(eval (arg('run_label_clean') if arg('run_label_clean') else 'run') + '_' + arg('run_seed'))"/>
+  <arg name="run_output_root" default="$(eval arg('payload_mpc_controller_dir') + '/plots/run_' + arg('run_tag'))"/>
+  <arg name="force_output_dir" default="$(eval arg('run_output_root') + '/force')"/>
+  <arg name="pinn_output_dir" default="$(eval arg('run_output_root') + '/pinn')"/>
+  <arg name="analytic_output_dir" default="$(eval arg('run_output_root') + '/analytic')"/>
+
+  <!-- Environment for downstream recorders -->
+  <env name="AUTOTRANS_RUN_TAG" value="$(arg run_tag)"/>
+  <env name="AUTOTRANS_ANALYTIC_DIR" value="$(arg analytic_output_dir)"/>
+  <env name="FORCE_DATA_OUTPUT" value="$(arg force_output_dir)"/>
+  <env name="PINN_DATA_OUTPUT" value="$(arg pinn_output_dir)"/>
+  <env name="PINN_SCENARIO_ID" value="$(arg scenario)"/>
+
+  <!-- Trajectory presets (resolved values) -->
+  <arg name="trajectory_mode_resolved" default="$(eval {'circle':'circle','figure_eight':'figure_eight','helix':'helix'}.get(arg('trajectory_preset'), arg('trajectory_mode')))"/>
+  <arg name="circle_radius_resolved" default="$(eval '3.0' if arg('trajectory_preset')=='circle' else arg('circle_radius'))"/>
+  <arg name="circle_omega_resolved" default="$(eval '0.5' if arg('trajectory_preset')=='circle' else arg('circle_omega'))"/>
+  <arg name="circle_center_x_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='circle' else arg('circle_center_x'))"/>
+  <arg name="circle_center_y_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='circle' else arg('circle_center_y'))"/>
+  <arg name="circle_altitude_resolved" default="$(eval '2.0' if arg('trajectory_preset')=='circle' else arg('circle_altitude'))"/>
+
+  <arg name="figure_radius_resolved" default="$(eval '3.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_radius'))"/>
+  <arg name="figure_omega_resolved" default="$(eval '0.3' if arg('trajectory_preset')=='figure_eight' else arg('figure_omega'))"/>
+  <arg name="figure_center_x_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_center_x'))"/>
+  <arg name="figure_center_y_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_center_y'))"/>
+  <arg name="figure_altitude_resolved" default="$(eval '2.0' if arg('trajectory_preset')=='figure_eight' else arg('figure_altitude'))"/>
+
+  <arg name="helix_radius_resolved" default="$(eval '2.5' if arg('trajectory_preset')=='helix' else arg('helix_radius'))"/>
+  <arg name="helix_omega_resolved" default="$(eval '0.4' if arg('trajectory_preset')=='helix' else arg('helix_omega'))"/>
+  <arg name="helix_center_x_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='helix' else arg('helix_center_x'))"/>
+  <arg name="helix_center_y_resolved" default="$(eval '0.0' if arg('trajectory_preset')=='helix' else arg('helix_center_y'))"/>
+  <arg name="helix_base_altitude_resolved" default="$(eval '1.5' if arg('trajectory_preset')=='helix' else arg('helix_base_altitude'))"/>
+  <arg name="helix_vertical_rate_resolved" default="$(eval '0.2' if arg('trajectory_preset')=='helix' else arg('helix_vertical_rate'))"/>
+  <arg name="helix_revolutions_resolved" default="$(eval '3.0' if arg('trajectory_preset')=='helix' else arg('helix_revolutions'))"/>
+  <!-- Derived cycle time for wind window (fallback to user-provided wind_window_cycle_time) -->
+  <arg name="wind_window_cycle_time_resolved" default="$(eval (6.283185307179586/abs(float(arg('figure_omega_resolved')))) if arg('trajectory_mode_resolved')=='figure_eight' and abs(float(arg('figure_omega_resolved')))>1e-6 else (6.283185307179586/abs(float(arg('circle_omega_resolved')))) if arg('trajectory_mode_resolved')=='circle' and abs(float(arg('circle_omega_resolved')))>1e-6 else (6.283185307179586/abs(float(arg('helix_omega_resolved')))) if arg('trajectory_mode_resolved')=='helix' and abs(float(arg('helix_omega_resolved')))>1e-6 else arg('wind_window_cycle_time'))"/>
+
+  <!-- Wind presets (resolved values) -->
+  <arg name="wind_type_resolved" default="$(eval {'c1_low':'dryden', 'c2_medium':'dryden', 'c3_high':'dryden', 'w1_medium_high':'composite', 'w1_medium_low':'composite', 'w1_medium_medium':'composite', 'w1_strong_high':'composite', 'w1_strong_low':'composite', 'w1_strong_medium':'composite', 'w1_weak_high':'composite', 'w1_weak_low':'composite', 'w1_weak_medium':'composite', 'w2_medium_high':'composite', 'w2_medium_low':'composite', 'w2_medium_medium':'composite', 'w2_strong_high':'composite', 'w2_strong_low':'composite', 'w2_strong_medium':'composite', 'w2_weak_high':'composite', 'w2_weak_low':'composite', 'w2_weak_medium':'composite', 'w3_medium_high':'composite', 'w3_medium_low':'composite', 'w3_medium_medium':'composite', 'w3_strong_high':'composite', 'w3_strong_low':'composite', 'w3_strong_medium':'composite', 'w3_weak_high':'composite', 'w3_weak_low':'composite', 'w3_weak_medium':'composite', 'w4_medium_high':'composite', 'w4_medium_low':'composite', 'w4_medium_medium':'composite', 'w4_strong_high':'composite', 'w4_strong_low':'composite', 'w4_strong_medium':'composite', 'w4_weak_high':'composite', 'w4_weak_low':'composite', 'w4_weak_medium':'composite', 'w5_medium_high':'composite', 'w5_medium_low':'composite', 'w5_medium_medium':'composite', 'w5_strong_high':'composite', 'w5_strong_low':'composite', 'w5_strong_medium':'composite', 'w5_weak_high':'composite', 'w5_weak_low':'composite', 'w5_weak_medium':'composite', 'w6_medium_high':'composite', 'w6_medium_low':'composite', 'w6_medium_medium':'composite', 'w6_strong_high':'composite', 'w6_strong_low':'composite', 'w6_strong_medium':'composite', 'w6_weak_high':'composite', 'w6_weak_low':'composite', 'w6_weak_medium':'composite'}.get(arg('wind_preset'), arg('wind_type')))"/>
+  <arg name="wind_constant_velocity_resolved" default="$(eval {'c1_low':'[0.0,0.0,0.0]', 'c2_medium':'[0.0,0.0,0.0]', 'c3_high':'[0.0,0.0,0.0]', 'w1_medium_high':'[5.000,0.000,0.000]', 'w1_medium_low':'[5.000,0.000,0.000]', 'w1_medium_medium':'[5.000,0.000,0.000]', 'w1_strong_high':'[9.000,0.000,0.000]', 'w1_strong_low':'[9.000,0.000,0.000]', 'w1_strong_medium':'[9.000,0.000,0.000]', 'w1_weak_high':'[2.000,0.000,0.000]', 'w1_weak_low':'[2.000,0.000,0.000]', 'w1_weak_medium':'[2.000,0.000,0.000]', 'w2_medium_high':'[0.000,0.000,5.000]', 'w2_medium_low':'[0.000,0.000,5.000]', 'w2_medium_medium':'[0.000,0.000,5.000]', 'w2_strong_high':'[0.000,0.000,9.000]', 'w2_strong_low':'[0.000,0.000,9.000]', 'w2_strong_medium':'[0.000,0.000,9.000]', 'w2_weak_high':'[0.000,0.000,2.000]', 'w2_weak_low':'[0.000,0.000,2.000]', 'w2_weak_medium':'[0.000,0.000,2.000]', 'w3_medium_high':'[3.536,3.536,0.000]', 'w3_medium_low':'[3.536,3.536,0.000]', 'w3_medium_medium':'[3.536,3.536,0.000]', 'w3_strong_high':'[6.364,6.364,0.000]', 'w3_strong_low':'[6.364,6.364,0.000]', 'w3_strong_medium':'[6.364,6.364,0.000]', 'w3_weak_high':'[1.414,1.414,0.000]', 'w3_weak_low':'[1.414,1.414,0.000]', 'w3_weak_medium':'[1.414,1.414,0.000]', 'w4_medium_high':'[2.887,2.887,2.887]', 'w4_medium_low':'[2.887,2.887,2.887]', 'w4_medium_medium':'[2.887,2.887,2.887]', 'w4_strong_high':'[5.196,5.196,5.196]', 'w4_strong_low':'[5.196,5.196,5.196]', 'w4_strong_medium':'[5.196,5.196,5.196]', 'w4_weak_high':'[1.155,1.155,1.155]', 'w4_weak_low':'[1.155,1.155,1.155]', 'w4_weak_medium':'[1.155,1.155,1.155]', 'w5_medium_high':'[5.000,5.000,0.000]', 'w5_medium_low':'[5.000,5.000,0.000]', 'w5_medium_medium':'[5.000,5.000,0.000]', 'w5_strong_high':'[9.000,9.000,0.000]', 'w5_strong_low':'[9.000,9.000,0.000]', 'w5_strong_medium':'[9.000,9.000,0.000]', 'w5_weak_high':'[2.000,2.000,0.000]', 'w5_weak_low':'[2.000,2.000,0.000]', 'w5_weak_medium':'[2.000,2.000,0.000]', 'w6_medium_high':'[2.887,-2.887,-2.887]', 'w6_medium_low':'[2.887,-2.887,-2.887]', 'w6_medium_medium':'[2.887,-2.887,-2.887]', 'w6_strong_high':'[5.196,-5.196,-5.196]', 'w6_strong_low':'[5.196,-5.196,-5.196]', 'w6_strong_medium':'[5.196,-5.196,-5.196]', 'w6_weak_high':'[1.155,-1.155,-1.155]', 'w6_weak_low':'[1.155,-1.155,-1.155]', 'w6_weak_medium':'[1.155,-1.155,-1.155]'}.get(arg('wind_preset'), arg('wind_constant_velocity')))"/>
+  <arg name="wind_dryden_sigma_resolved" default="$(eval {'c1_low':'[0.6,0.6,0.3]', 'c2_medium':'[1.5,1.5,0.5]', 'c3_high':'[2.5,2.5,0.8]', 'w1_medium_high':'[2.5,2.5,0.8]', 'w1_medium_low':'[0.6,0.6,0.3]', 'w1_medium_medium':'[1.5,1.5,0.5]', 'w1_strong_high':'[2.5,2.5,0.8]', 'w1_strong_low':'[0.6,0.6,0.3]', 'w1_strong_medium':'[1.5,1.5,0.5]', 'w1_weak_high':'[2.5,2.5,0.8]', 'w1_weak_low':'[0.6,0.6,0.3]', 'w1_weak_medium':'[1.5,1.5,0.5]', 'w2_medium_high':'[2.5,2.5,0.8]', 'w2_medium_low':'[0.6,0.6,0.3]', 'w2_medium_medium':'[1.5,1.5,0.5]', 'w2_strong_high':'[2.5,2.5,0.8]', 'w2_strong_low':'[0.6,0.6,0.3]', 'w2_strong_medium':'[1.5,1.5,0.5]', 'w2_weak_high':'[2.5,2.5,0.8]', 'w2_weak_low':'[0.6,0.6,0.3]', 'w2_weak_medium':'[1.5,1.5,0.5]', 'w3_medium_high':'[2.5,2.5,0.8]', 'w3_medium_low':'[0.6,0.6,0.3]', 'w3_medium_medium':'[1.5,1.5,0.5]', 'w3_strong_high':'[2.5,2.5,0.8]', 'w3_strong_low':'[0.6,0.6,0.3]', 'w3_strong_medium':'[1.5,1.5,0.5]', 'w3_weak_high':'[2.5,2.5,0.8]', 'w3_weak_low':'[0.6,0.6,0.3]', 'w3_weak_medium':'[1.5,1.5,0.5]', 'w4_medium_high':'[2.5,2.5,0.8]', 'w4_medium_low':'[0.6,0.6,0.3]', 'w4_medium_medium':'[1.5,1.5,0.5]', 'w4_strong_high':'[2.5,2.5,0.8]', 'w4_strong_low':'[0.6,0.6,0.3]', 'w4_strong_medium':'[1.5,1.5,0.5]', 'w4_weak_high':'[2.5,2.5,0.8]', 'w4_weak_low':'[0.6,0.6,0.3]', 'w4_weak_medium':'[1.5,1.5,0.5]', 'w5_medium_high':'[2.5,2.5,0.8]', 'w5_medium_low':'[0.6,0.6,0.3]', 'w5_medium_medium':'[1.5,1.5,0.5]', 'w5_strong_high':'[2.5,2.5,0.8]', 'w5_strong_low':'[0.6,0.6,0.3]', 'w5_strong_medium':'[1.5,1.5,0.5]', 'w5_weak_high':'[2.5,2.5,0.8]', 'w5_weak_low':'[0.6,0.6,0.3]', 'w5_weak_medium':'[1.5,1.5,0.5]', 'w6_medium_high':'[2.5,2.5,0.8]', 'w6_medium_low':'[0.6,0.6,0.3]', 'w6_medium_medium':'[1.5,1.5,0.5]', 'w6_strong_high':'[2.5,2.5,0.8]', 'w6_strong_low':'[0.6,0.6,0.3]', 'w6_strong_medium':'[1.5,1.5,0.5]', 'w6_weak_high':'[2.5,2.5,0.8]', 'w6_weak_low':'[0.6,0.6,0.3]', 'w6_weak_medium':'[1.5,1.5,0.5]'}.get(arg('wind_preset'), arg('wind_dryden_sigma')))"/>
+  <arg name="wind_dryden_length_scale_resolved" default="$(eval {'c1_low':'[12.0,12.0,6.0]', 'c2_medium':'[18.0,18.0,9.0]', 'c3_high':'[25.0,25.0,12.0]', 'w1_medium_high':'[25.0,25.0,12.0]', 'w1_medium_low':'[12.0,12.0,6.0]', 'w1_medium_medium':'[18.0,18.0,9.0]', 'w1_strong_high':'[25.0,25.0,12.0]', 'w1_strong_low':'[12.0,12.0,6.0]', 'w1_strong_medium':'[18.0,18.0,9.0]', 'w1_weak_high':'[25.0,25.0,12.0]', 'w1_weak_low':'[12.0,12.0,6.0]', 'w1_weak_medium':'[18.0,18.0,9.0]', 'w2_medium_high':'[25.0,25.0,12.0]', 'w2_medium_low':'[12.0,12.0,6.0]', 'w2_medium_medium':'[18.0,18.0,9.0]', 'w2_strong_high':'[25.0,25.0,12.0]', 'w2_strong_low':'[12.0,12.0,6.0]', 'w2_strong_medium':'[18.0,18.0,9.0]', 'w2_weak_high':'[25.0,25.0,12.0]', 'w2_weak_low':'[12.0,12.0,6.0]', 'w2_weak_medium':'[18.0,18.0,9.0]', 'w3_medium_high':'[25.0,25.0,12.0]', 'w3_medium_low':'[12.0,12.0,6.0]', 'w3_medium_medium':'[18.0,18.0,9.0]', 'w3_strong_high':'[25.0,25.0,12.0]', 'w3_strong_low':'[12.0,12.0,6.0]', 'w3_strong_medium':'[18.0,18.0,9.0]', 'w3_weak_high':'[25.0,25.0,12.0]', 'w3_weak_low':'[12.0,12.0,6.0]', 'w3_weak_medium':'[18.0,18.0,9.0]', 'w4_medium_high':'[25.0,25.0,12.0]', 'w4_medium_low':'[12.0,12.0,6.0]', 'w4_medium_medium':'[18.0,18.0,9.0]', 'w4_strong_high':'[25.0,25.0,12.0]', 'w4_strong_low':'[12.0,12.0,6.0]', 'w4_strong_medium':'[18.0,18.0,9.0]', 'w4_weak_high':'[25.0,25.0,12.0]', 'w4_weak_low':'[12.0,12.0,6.0]', 'w4_weak_medium':'[18.0,18.0,9.0]', 'w5_medium_high':'[25.0,25.0,12.0]', 'w5_medium_low':'[12.0,12.0,6.0]', 'w5_medium_medium':'[18.0,18.0,9.0]', 'w5_strong_high':'[25.0,25.0,12.0]', 'w5_strong_low':'[12.0,12.0,6.0]', 'w5_strong_medium':'[18.0,18.0,9.0]', 'w5_weak_high':'[25.0,25.0,12.0]', 'w5_weak_low':'[12.0,12.0,6.0]', 'w5_weak_medium':'[18.0,18.0,9.0]', 'w6_medium_high':'[25.0,25.0,12.0]', 'w6_medium_low':'[12.0,12.0,6.0]', 'w6_medium_medium':'[18.0,18.0,9.0]', 'w6_strong_high':'[25.0,25.0,12.0]', 'w6_strong_low':'[12.0,12.0,6.0]', 'w6_strong_medium':'[18.0,18.0,9.0]', 'w6_weak_high':'[25.0,25.0,12.0]', 'w6_weak_low':'[12.0,12.0,6.0]', 'w6_weak_medium':'[18.0,18.0,9.0]'}.get(arg('wind_preset'), arg('wind_dryden_length_scale')))"/>
+  <arg name="wind_override_yaml_resolved" default="$(eval ('{dryden: {seed: %d}}' % {'c1_low':2101, 'c2_medium':2102, 'c3_high':2103, 'w1_medium_high':3006, 'w1_medium_low':3004, 'w1_medium_medium':3005, 'w1_strong_high':3009, 'w1_strong_low':3007, 'w1_strong_medium':3008, 'w1_weak_high':3003, 'w1_weak_low':3001, 'w1_weak_medium':3002, 'w2_medium_high':3015, 'w2_medium_low':3013, 'w2_medium_medium':3014, 'w2_strong_high':3018, 'w2_strong_low':3016, 'w2_strong_medium':3017, 'w2_weak_high':3012, 'w2_weak_low':3010, 'w2_weak_medium':3011, 'w3_medium_high':3024, 'w3_medium_low':3022, 'w3_medium_medium':3023, 'w3_strong_high':3027, 'w3_strong_low':3025, 'w3_strong_medium':3026, 'w3_weak_high':3021, 'w3_weak_low':3019, 'w3_weak_medium':3020, 'w4_medium_high':3033, 'w4_medium_low':3031, 'w4_medium_medium':3032, 'w4_strong_high':3036, 'w4_strong_low':3034, 'w4_strong_medium':3035, 'w4_weak_high':3030, 'w4_weak_low':3028, 'w4_weak_medium':3029, 'w5_medium_high':3042, 'w5_medium_low':3040, 'w5_medium_medium':3041, 'w5_strong_high':3045, 'w5_strong_low':3043, 'w5_strong_medium':3044, 'w5_weak_high':3039, 'w5_weak_low':3037, 'w5_weak_medium':3038, 'w6_medium_high':3051, 'w6_medium_low':3049, 'w6_medium_medium':3050, 'w6_strong_high':3054, 'w6_strong_low':3052, 'w6_strong_medium':3053, 'w6_weak_high':3048, 'w6_weak_low':3046, 'w6_weak_medium':3047}[arg('wind_preset')]) if arg('wind_preset') in {'c1_low', 'c2_medium', 'c3_high', 'w1_weak_low', 'w1_weak_medium', 'w1_weak_high', 'w1_medium_low', 'w1_medium_medium', 'w1_medium_high', 'w1_strong_low', 'w1_strong_medium', 'w1_strong_high', 'w2_weak_low', 'w2_weak_medium', 'w2_weak_high', 'w2_medium_low', 'w2_medium_medium', 'w2_medium_high', 'w2_strong_low', 'w2_strong_medium', 'w2_strong_high', 'w3_weak_low', 'w3_weak_medium', 'w3_weak_high', 'w3_medium_low', 'w3_medium_medium', 'w3_medium_high', 'w3_strong_low', 'w3_strong_medium', 'w3_strong_high', 'w4_weak_low', 'w4_weak_medium', 'w4_weak_high', 'w4_medium_low', 'w4_medium_medium', 'w4_medium_high', 'w4_strong_low', 'w4_strong_medium', 'w4_strong_high', 'w5_weak_low', 'w5_weak_medium', 'w5_weak_high', 'w5_medium_low', 'w5_medium_medium', 'w5_medium_high', 'w5_strong_low', 'w5_strong_medium', 'w5_strong_high', 'w6_weak_low', 'w6_weak_medium', 'w6_weak_high', 'w6_medium_low', 'w6_medium_medium', 'w6_medium_high', 'w6_strong_low', 'w6_strong_medium', 'w6_strong_high'} else arg('wind_override_yaml'))"/>
+
+  <arg name="mpc_config" default="$(find payload_mpc_controller)/config/mpc.yaml"/>
+
+  <include file="$(find payload_planner)/launch/replan.launch">
+    <arg name="use_planner" value="false"/>
+    <arg name="trajectory_mode" value="$(arg trajectory_mode_resolved)"/>
+    <arg name="circle_radius" value="$(arg circle_radius_resolved)"/>
+    <arg name="circle_omega" value="$(arg circle_omega_resolved)"/>
+    <arg name="circle_center_x" value="$(arg circle_center_x_resolved)"/>
+    <arg name="circle_center_y" value="$(arg circle_center_y_resolved)"/>
+    <arg name="circle_altitude" value="$(arg circle_altitude_resolved)"/>
+    <arg name="figure_radius" value="$(arg figure_radius_resolved)"/>
+    <arg name="figure_omega" value="$(arg figure_omega_resolved)"/>
+    <arg name="figure_center_x" value="$(arg figure_center_x_resolved)"/>
+    <arg name="figure_center_y" value="$(arg figure_center_y_resolved)"/>
+    <arg name="figure_altitude" value="$(arg figure_altitude_resolved)"/>
+    <arg name="helix_radius" value="$(arg helix_radius_resolved)"/>
+    <arg name="helix_omega" value="$(arg helix_omega_resolved)"/>
+    <arg name="helix_center_x" value="$(arg helix_center_x_resolved)"/>
+    <arg name="helix_center_y" value="$(arg helix_center_y_resolved)"/>
+    <arg name="helix_base_altitude" value="$(arg helix_base_altitude_resolved)"/>
+    <arg name="helix_vertical_rate" value="$(arg helix_vertical_rate_resolved)"/>
+    <arg name="helix_revolutions" value="$(arg helix_revolutions_resolved)"/>
+    <arg name="init_x" value="$(arg init_x)"/>
+    <arg name="init_y" value="$(arg init_y)"/>
+    <arg name="init_z" value="$(arg init_z)"/>
+    <arg name="wind_type" value="$(arg wind_type_resolved)"/>
+    <arg name="wind_constant_velocity" value="$(arg wind_constant_velocity_resolved)"/>
+    <arg name="wind_gust_axis" value="$(arg wind_gust_axis)"/>
+    <arg name="wind_dryden_sigma" value="$(arg wind_dryden_sigma_resolved)"/>
+    <arg name="wind_dryden_length_scale" value="$(arg wind_dryden_length_scale_resolved)"/>
+    <arg name="wind_override_yaml" value="$(arg wind_override_yaml_resolved)"/>
+    <arg name="wind_gradual_enabled" value="$(arg wind_gradual_enabled)"/>
+    <arg name="wind_gradual_start_time" value="$(arg wind_gradual_start_time)"/>
+    <arg name="wind_gradual_stop_time" value="$(arg wind_gradual_stop_time)"/>
+    <arg name="wind_gradual_cycle_profile_enabled" value="$(arg wind_gradual_cycle_profile_enabled)"/>
+    <arg name="wind_gradual_ramp_up_time" value="$(arg wind_gradual_ramp_up_time)"/>
+    <arg name="wind_gradual_ramp_down_time" value="$(arg wind_gradual_ramp_down_time)"/>
+    <arg name="wind_window_enabled" value="$(arg wind_window_enabled)"/>
+    <arg name="wind_window_auto_from_cycle" value="$(arg wind_window_auto_from_cycle)"/>
+    <arg name="wind_window_skip_cycles" value="$(arg wind_window_skip_cycles)"/>
+    <arg name="wind_window_active_cycles" value="$(arg wind_window_active_cycles)"/>
+    <arg name="wind_window_cycle_time" value="$(arg wind_window_cycle_time_resolved)"/>
+    <arg name="wind_window_start_time" value="$(arg wind_window_start_time)"/>
+    <arg name="wind_window_stop_time" value="$(arg wind_window_stop_time)"/>
+    <arg name="mpc_config" value="$(arg mpc_config)"/>
+    <arg name="warmup_trim" value="$(arg warmup_trim)"/>
+    <arg name="analytic_target_cycles" value="$(arg analytic_target_cycles)"/>
+  </include>
+
+  <!-- Pinn data recorder is launched externally (e.g., via batch_data_collection.py) -->
+</launch>

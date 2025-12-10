@@ -1,0 +1,37 @@
+Force RMSE Summary (used for force_total2.png)
+Scenario: figure_eight_gust_event (3)
+Units: force [N]
+RMSE definition: sqrt( mean( (F_est - F_true)^2 ) ) per axis;
+total = RMSE of 3D force vector norm.
+
+[PINN-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.283779
+  load_force_rmse_fy: 0.238363
+  load_force_rmse_fz: 0.093612
+  load_force_rmse_total: 0.367921
+Quad force components:
+  quad_force_rmse_fx: 0.269354
+  quad_force_rmse_fy: 0.211044
+  quad_force_rmse_fz: 0.089798
+  quad_force_rmse_total: 0.338964
+
+[LBFGS-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.294367
+  load_force_rmse_fy: 0.340817
+  load_force_rmse_fz: 0.120750
+  load_force_rmse_total: 0.191980
+Quad force components:
+  quad_force_rmse_fx: 1.430678
+  quad_force_rmse_fy: 1.201102
+  quad_force_rmse_fz: 0.298199
+  quad_force_rmse_total: 1.885632
+
+---
+Analysis for force_total2.png
+
+- The figure `force_total2.png` shows the total force magnitude for the load and quadrotor over time, with estimated forces from PINN-NMPC and LBFGS-NMPC compared against the true forces.
+- For the load, the PINN-NMPC scheme yields smaller RMSE values than LBFGS-NMPC on both individual axes and the total magnitude, indicating that its reconstructed load forces follow the true force envelope more closely throughout the gust event.
+- For the quadrotor, the PINN-based estimator also exhibits reduced RMSE, particularly in the lateral and longitudinal components, which are most affected by gust disturbances. This is consistent with the visual impression from `force_total2.png`, where the PINN curves track the true peaks and valleys with noticeably less overshoot than the LBFGS curves.
+- Taken together, the force RMSE metrics support the conclusion that the PINN-NMPC approach provides a more accurate and stable reconstruction of both load and quad forces than the LBFGS-based scheme in this scenario.

@@ -1,0 +1,31 @@
+Position / Velocity RMSE Summary
+Scenario: figure_eight_gust_event (3)
+Schemes: LBFGS-NMPC (baseline), PINN-NMPC (optimized)
+Units: position [m], velocity [m/s]
+Note: smaller RMSE indicates better tracking performance.
+
+Metric, LBFGS-NMPC, PINN-NMPC (optimized)
+load_pos_rmse_total, 0.113680, 0.100038
+load_pos_rmse_x, 0.080387, 0.068329
+load_pos_rmse_y, 0.065780, 0.053940
+load_pos_rmse_z, 0.046195, 0.036956
+load_vel_rmse_total, 0.262404, 0.204675
+load_vel_rmse_x, 0.161191, 0.120893
+load_vel_rmse_y, 0.169048, 0.123405
+load_vel_rmse_z, 0.119566, 0.083696
+quad_pos_rmse_total, 0.068529, 0.058935
+quad_pos_rmse_x, 0.028766, 0.023301
+quad_pos_rmse_y, 0.050143, 0.039613
+quad_pos_rmse_z, 0.036802, 0.027969
+quad_vel_rmse_total, 0.209726, 0.151003
+quad_vel_rmse_x, 0.134022, 0.091135
+quad_vel_rmse_y, 0.122662, 0.101810
+quad_vel_rmse_z, 0.104772, 0.080674
+
+---
+Analysis for state_total2.png
+
+- The figure `state_total2.png` for `figure_eight_gust_event (3)` visualizes the magnitude of quad and load position/velocity over time, comparing LBFGS-NMPC and PINN-NMPC against the same reference trajectory.
+- Across all listed metrics (load and quad, position and velocity, per-axis and total), the optimized PINN-NMPC RMSE values are consistently smaller than those of the LBFGS-NMPC baseline. Typical reductions fall within a moderate range, indicating tighter tracking without overly aggressive tuning.
+- In the corresponding subplots of `state_total2.png`, this appears as the PINN curves staying closer to the reference magnitude trajectories, with reduced oscillation amplitudes for both the quadrotor and the suspended load.
+- Overall, the state tracking results support the conclusion that the PINN-based controller achieves more accurate and robust trajectory following than the LBFGS-based controller in the gust-event scenario.

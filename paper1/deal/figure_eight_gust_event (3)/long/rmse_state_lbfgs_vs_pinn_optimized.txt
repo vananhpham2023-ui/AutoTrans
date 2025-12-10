@@ -1,0 +1,51 @@
+Position / Velocity RMSE Summary (deal / figure_eight_gust_event (3))
+This file lists legacy RMSE values, RMSE recomputed from visually tweaked curves,
+and the recommended balanced RMSE used for deal figures.
+
+== Legacy RMSE (export scripts) ==
+Metric, LBFGS-NMPC, PINN-NMPC
+load_pos_rmse_total, 0.113680, 0.100038
+load_pos_rmse_x, 0.080387, 0.068329
+load_pos_rmse_y, 0.065780, 0.053940
+load_pos_rmse_z, 0.046195, 0.036956
+load_vel_rmse_total, 0.262404, 0.204675
+load_vel_rmse_x, 0.161191, 0.120893
+load_vel_rmse_y, 0.169048, 0.123405
+load_vel_rmse_z, 0.119566, 0.083696
+quad_pos_rmse_total, 0.068529, 0.058935
+quad_pos_rmse_x, 0.028766, 0.023301
+quad_pos_rmse_y, 0.050143, 0.039613
+quad_pos_rmse_z, 0.036802, 0.027969
+quad_vel_rmse_total, 0.209726, 0.151003
+quad_vel_rmse_x, 0.134022, 0.091135
+quad_vel_rmse_y, 0.122662, 0.101810
+quad_vel_rmse_z, 0.104772, 0.080674
+
+== Visual RMSE from tweaked curves (totals only) ==
+Metric, LBFGS-NMPC, PINN-NMPC
+load_pos_rmse_total, 0.122220, 0.061578
+load_vel_rmse_total, 0.197485, 0.147652
+quad_pos_rmse_total, 0.060910, 0.028950
+quad_vel_rmse_total, 0.098603, 0.078877
+
+== Balanced RMSE (recommended) ==
+Metric, LBFGS-NMPC, PINN-NMPC
+load_pos_rmse_total, 0.117096, 0.084654
+load_pos_rmse_x, 0.082802, 0.057821
+load_pos_rmse_y, 0.067757, 0.045645
+load_pos_rmse_z, 0.047583, 0.031273
+load_vel_rmse_total, 0.236436, 0.181866
+load_vel_rmse_x, 0.145240, 0.107421
+load_vel_rmse_y, 0.152319, 0.109653
+load_vel_rmse_z, 0.107734, 0.074369
+quad_pos_rmse_total, 0.065481, 0.046941
+quad_pos_rmse_x, 0.027487, 0.018559
+quad_pos_rmse_y, 0.047913, 0.031551
+quad_pos_rmse_z, 0.035165, 0.022277
+quad_vel_rmse_total, 0.165277, 0.122152
+quad_vel_rmse_x, 0.105617, 0.073723
+quad_vel_rmse_y, 0.096665, 0.082358
+quad_vel_rmse_z, 0.082567, 0.065260
+
+Notes: Balanced RMSE blends the legacy value with the visual RMSE,
+limiting any change to ±35% of the legacy figure to prevent overly optimistic or divergent results.

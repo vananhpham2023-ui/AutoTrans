@@ -1,0 +1,301 @@
+roscore/master is not yet running, will wait for it to start
+master has started, initiating launch
+... logging to /home/wangshengkai/.ros/log/6411937c-c9c8-11f0-abeb-6d9c0fd3df6d/roslaunch-Wangsk-123758.log
+Checking log directory for disk usage. This may take a while.
+Press Ctrl-C to interrupt
+[31mWARNING: disk usage in log directory [/home/wangshengkai/.ros/log] is over 1GB.
+It's recommended that you use the 'rosclean' command.[0m
+]2;/home/wangshengkai/autotrans_ws/src/AutoTrans/planner/plan_manage/launch/controller_only.launch
+[1mstarted roslaunch server http://127.0.0.1:45915/[0m
+
+SUMMARY
+========
+
+PARAMETERS
+ * /force_data_recorder/cycles_to_report: 10
+ * /force_data_recorder/enable_plot: True
+ * /force_data_recorder/sync_queue: 200
+ * /force_data_recorder/sync_slop: 0.05
+ * /force_data_recorder/wind_topic: /so3_quadrotor/wind
+ * /mpc_controller_node/Q_attitude_rp: 120.0
+ * /mpc_controller_node/Q_attitude_yaw: 120.0
+ * /mpc_controller_node/Q_cable: 0.0
+ * /mpc_controller_node/Q_dcable: 0.0
+ * /mpc_controller_node/Q_payload_velocity: 3.5
+ * /mpc_controller_node/Q_payload_xy: 23.0
+ * /mpc_controller_node/Q_payload_z: 20.0
+ * /mpc_controller_node/Q_pos_xy: 265.0
+ * /mpc_controller_node/Q_pos_z: 255.0
+ * /mpc_controller_node/Q_velocity: 21.0
+ * /mpc_controller_node/R_pitchroll: 1.0
+ * /mpc_controller_node/R_thrust: 1.0
+ * /mpc_controller_node/R_yaw: 1.0
+ * /mpc_controller_node/ctrl_freq_max: 100.0
+ * /mpc_controller_node/filter/cutoff_freq_cable: 20.0
+ * /mpc_controller_node/filter/cutoff_freq_dcable: 20.0
+ * /mpc_controller_node/filter/cutoff_freq_load_acc: 20.0
+ * /mpc_controller_node/filter/cutoff_freq_load_omg: 20.0
+ * /mpc_controller_node/filter/cutoff_freq_quad_acc: 20.0
+ * /mpc_controller_node/filter/cutoff_freq_quad_omg: 20.0
+ * /mpc_controller_node/filter/cutoff_freq_rpm: 20.0
+ * /mpc_controller_node/filter/sample_freq_cable: 400.0
+ * /mpc_controller_node/filter/sample_freq_dcable: 400.0
+ * /mpc_controller_node/filter/sample_freq_load_acc: 400.0
+ * /mpc_controller_node/filter/sample_freq_load_omg: 400.0
+ * /mpc_controller_node/filter/sample_freq_quad_acc: 400.0
+ * /mpc_controller_node/filter/sample_freq_quad_omg: 400.0
+ * /mpc_controller_node/filter/sample_freq_rpm: 400.0
+ * /mpc_controller_node/force_estimator/USE_CONSTANT_MOMENT: 1
+ * /mpc_controller_node/force_estimator/cutoff_freq_fl: 12.0
+ * /mpc_controller_node/force_estimator/cutoff_freq_fq: 12.0
+ * /mpc_controller_node/force_estimator/force_observer_freq: 400.0
+ * /mpc_controller_node/force_estimator/imu_body_length: 0.66844507
+ * /mpc_controller_node/force_estimator/kf: 8.98132e-09
+ * /mpc_controller_node/force_estimator/max_force: 10.0
+ * /mpc_controller_node/force_estimator/max_queue: 80
+ * /mpc_controller_node/force_estimator/pinn/ema_alpha: 1.0
+ * /mpc_controller_node/force_estimator/pinn/failover_threshold: 15
+ * /mpc_controller_node/force_estimator/pinn/model_path: /home/wangshengka...
+ * /mpc_controller_node/force_estimator/pinn/normalizer_path: /home/wangshengka...
+ * /mpc_controller_node/force_estimator/sample_freq_fl: 400.0
+ * /mpc_controller_node/force_estimator/sample_freq_fq: 400.0
+ * /mpc_controller_node/force_estimator/type: pinn
+ * /mpc_controller_node/force_estimator/use_force_estimator: True
+ * /mpc_controller_node/force_estimator/var_weight: 80.0
+ * /mpc_controller_node/gravity: 9.795
+ * /mpc_controller_node/input_cost_exponential: 0.5
+ * /mpc_controller_node/l_length: 0.66844507
+ * /mpc_controller_node/low_voltage: -0.1
+ * /mpc_controller_node/mass_l: 0.285
+ * /mpc_controller_node/mass_q: 1.15
+ * /mpc_controller_node/max_angle: 30
+ * /mpc_controller_node/max_bodyrate_xy: 3.0
+ * /mpc_controller_node/max_bodyrate_z: 1.2
+ * /mpc_controller_node/max_manual_vel: 1.0
+ * /mpc_controller_node/max_thrust: 60.0
+ * /mpc_controller_node/min_thrust: 1.0
+ * /mpc_controller_node/msg_timeout/bat: 0.5
+ * /mpc_controller_node/msg_timeout/cmd: 0.5
+ * /mpc_controller_node/msg_timeout/imu: 0.5
+ * /mpc_controller_node/msg_timeout/odom: 0.5
+ * /mpc_controller_node/msg_timeout/rc: 0.5
+ * /mpc_controller_node/print_info: False
+ * /mpc_controller_node/rc_reverse/pitch: True
+ * /mpc_controller_node/rc_reverse/roll: False
+ * /mpc_controller_node/rc_reverse/throttle: True
+ * /mpc_controller_node/rc_reverse/yaw: False
+ * /mpc_controller_node/reference/circle/altitude: 2.0
+ * /mpc_controller_node/reference/circle/angular_velocity: 0.5
+ * /mpc_controller_node/reference/circle/center: [ 0.0, 0.0 ]
+ * /mpc_controller_node/reference/circle/radius: 3.0
+ * /mpc_controller_node/reference/figure_eight/altitude: 2.0
+ * /mpc_controller_node/reference/figure_eight/angular_velocity: 0.5
+ * /mpc_controller_node/reference/figure_eight/center: [ 0.0, 0.0 ]
+ * /mpc_controller_node/reference/figure_eight/radius: 5.0
+ * /mpc_controller_node/reference/helix/angular_velocity: 0.4
+ * /mpc_controller_node/reference/helix/base_altitude: 1.5
+ * /mpc_controller_node/reference/helix/center: [ 0.0, 0.0 ]
+ * /mpc_controller_node/reference/helix/radius: 4.0
+ * /mpc_controller_node/reference/helix/revolutions: 3.0
+ * /mpc_controller_node/reference/helix/vertical_rate: 0.4
+ * /mpc_controller_node/reference/mode: circle
+ * /mpc_controller_node/reference/use_planner: False
+ * /mpc_controller_node/state_cost_exponential: 0.5
+ * /mpc_controller_node/step_N: 20
+ * /mpc_controller_node/step_T: 0.041
+ * /mpc_controller_node/thrust_model/accurate_thrust_model: 0
+ * /mpc_controller_node/thrust_model/filter_factor: 0.2
+ * /mpc_controller_node/thrust_model/hover_percentage: 0.25
+ * /mpc_controller_node/thrust_model/noisy_imu: False
+ * /mpc_controller_node/thrust_model/print_value: False
+ * /mpc_controller_node/use_fix_yaw: False
+ * /mpc_controller_node/use_simulation: True
+ * /mpc_controller_node/use_trajectory_ending_pos: True
+ * /odom_visualization/color/a: 1.0
+ * /odom_visualization/color/b: 0.0
+ * /odom_visualization/color/g: 0.0
+ * /odom_visualization/color/r: 0.0
+ * /odom_visualization/covariance_scale: 100.0
+ * /odom_visualization/robot_scale: 0.5
+ * /odom_visualization/tf45: False
+ * /pcl_render_node/cam_cx: 321.04638671875
+ * /pcl_render_node/cam_cy: 243.44969177246094
+ * /pcl_render_node/cam_fx: 387.229248046875
+ * /pcl_render_node/cam_fy: 387.229248046875
+ * /pcl_render_node/cam_height: 480
+ * /pcl_render_node/cam_width: 640
+ * /pcl_render_node/estimation_rate: 30.0
+ * /pcl_render_node/map/x_size: 35.0
+ * /pcl_render_node/map/y_size: 15.0
+ * /pcl_render_node/map/z_size: 3.2
+ * /pcl_render_node/sensing_horizon: 10.0
+ * /pcl_render_node/sensing_rate: 30.0
+ * /rosdistro: noetic
+ * /rosversion: 1.17.4
+ * /so3_quadrotor/Ixx: 0.00264
+ * /so3_quadrotor/Iyy: 0.00264
+ * /so3_quadrotor/Izz: 0.00496
+ * /so3_quadrotor/arm_length: 0.26
+ * /so3_quadrotor/g: 9.795
+ * /so3_quadrotor/init_quadx: 2.0
+ * /so3_quadrotor/init_quady: 0.0
+ * /so3_quadrotor/init_quadz: 2.0
+ * /so3_quadrotor/init_x: 2.0
+ * /so3_quadrotor/init_y: 0.0
+ * /so3_quadrotor/init_yaw: 0.0
+ * /so3_quadrotor/init_z: 2.0
+ * /so3_quadrotor/kOmega: [3.0, 3.0, 3.0]
+ * /so3_quadrotor/kdOmega: [15.0, 15.0, 15.0]
+ * /so3_quadrotor/kf: 8.98132e-09
+ * /so3_quadrotor/l_length: 0.66844507
+ * /so3_quadrotor/mass: 1.15
+ * /so3_quadrotor/mass_load: 0.283
+ * /so3_quadrotor/max_rpm: 45000.0
+ * /so3_quadrotor/min_rpm: 1200.0
+ * /so3_quadrotor/motor_time_constant: 0.03333
+ * /so3_quadrotor/noise_acc_payload: 0.0
+ * /so3_quadrotor/noise_acc_uav: 0.0
+ * /so3_quadrotor/noise_payload: 0.0
+ * /so3_quadrotor/noise_rpm: 0.0
+ * /so3_quadrotor/noise_uav: 0.0
+ * /so3_quadrotor/noise_vel_payload: 0.0
+ * /so3_quadrotor/noise_vel_uav: 0.0
+ * /so3_quadrotor/odom_rate: 400
+ * /so3_quadrotor/payload_size: 0.1
+ * /so3_quadrotor/prop_radius: 0.062
+ * /so3_quadrotor/simulation_rate: 1000
+ * /so3_quadrotor/true_force_rate: 100.0
+ * /so3_quadrotor/wind/constant/direction: [1.0, 0.0, 0.0]
+ * /so3_quadrotor/wind/constant/speed: 0.0
+ * /so3_quadrotor/wind/constant/velocity: [0.0, 0.0, 0.0]
+ * /so3_quadrotor/wind/dryden/bandwidth: 1.0
+ * /so3_quadrotor/wind/dryden/length_scale: [12.0, 12.0, 6.0]
+ * /so3_quadrotor/wind/dryden/reference_height: 10.0
+ * /so3_quadrotor/wind/dryden/seed: 2101
+ * /so3_quadrotor/wind/dryden/sigma: [0.6, 0.6, 0.3]
+ * /so3_quadrotor/wind/gradual/cycle_profile_enabled: False
+ * /so3_quadrotor/wind/gradual/enabled: False
+ * /so3_quadrotor/wind/gradual/ramp_down_time: 0.004
+ * /so3_quadrotor/wind/gradual/ramp_up_time: 0.004
+ * /so3_quadrotor/wind/gradual/start_time: 0.0
+ * /so3_quadrotor/wind/gradual/stop_time: 0.0
+ * /so3_quadrotor/wind/gust/amplitude: 0.0
+ * /so3_quadrotor/wind/gust/axis: [1.0, 0.0, 0.0]
+ * /so3_quadrotor/wind/gust/bias: 0.0
+ * /so3_quadrotor/wind/gust/duty_cycle: 0.5
+ * /so3_quadrotor/wind/gust/frequency: 0.2
+ * /so3_quadrotor/wind/gust/mode: sine
+ * /so3_quadrotor/wind/gust/phase: 0.0
+ * /so3_quadrotor/wind/type: dryden
+ * /so3_quadrotor/wind/window/active_cycles: 0
+ * /so3_quadrotor/wind/window/auto_from_cycle: False
+ * /so3_quadrotor/wind/window/cycle_time: 12.566370614359172
+ * /so3_quadrotor/wind/window/enabled: False
+ * /so3_quadrotor/wind/window/skip_cycles: 0
+ * /so3_quadrotor/wind/window/start_time: 0.0
+ * /so3_quadrotor/wind/window/stop_time: 0.0
+
+NODES
+  /
+    force_data_recorder (payload_mpc_controller/force_data_recorder.py)
+    manager (nodelet/nodelet)
+    mpc_controller_node (payload_mpc_controller/mpc_controller_node)
+    odom_visualization (odom_visualization/odom_visualization)
+    pcl_render_node (local_sensing_node/pcl_render_node)
+    rviz (rviz/rviz)
+    so3_quadrotor (nodelet/nodelet)
+
+[1mROS_MASTER_URI=http://127.0.0.1:11312[0m
+]2;/home/wangshengkai/autotrans_ws/src/AutoTrans/planner/plan_manage/launch/controller_only.launch http://127.0.0.1:11312
+[1mprocess[mpc_controller_node-1]: started with pid [125096][0m
+[1mprocess[force_data_recorder-2]: started with pid [125097][0m
+[1mprocess[manager-3]: started with pid [125098][0m
+[1mprocess[so3_quadrotor-4]: started with pid [125099][0m
+[1mprocess[odom_visualization-5]: started with pid [125100][0m
+[1mprocess[pcl_render_node-6]: started with pid [125102][0m
+[1mprocess[rviz-7]: started with pid [125118][0m
+[33m[WARN] [1764052303.146245987]: Invalid initial position of quadrotor, using the default value[0m
+[33m[WARN] [1764052303.691760687]: RC reverse is enabled. Becareful when you use it.[0m
+[33m[WARN] [1764052303.691869024]: You are using simulation. DON'T set this in the real drone.[0m
+[0m[INFO] [1764052303.603388086]: [MPC][reference] use_planner=false, mode=circle[0m
+param ended!
+[INFO] [1764052303.703410]: [force_data_recorder] Writing outputs under /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251125062919_1_2830/force (run_tag=circle-c1_low_20251125062919_1_2830)
+[INFO] [1764052303.710328]: [force_data_recorder] Waiting 125.7 s (10.0 cycles) before generating report.
+[INFO] [1764052303.714943]: [force_data_recorder] Live plot disabled (backend=agg, enable_plot=True).
+[INFO] [1764052303.735232]: [force_data_recorder] Node started. Subscribing to /so3_quadrotor/true_force and /mpc_controller_node/mpc/force.
+[33m[WARN] [1764052303.780181776]: [MPCFSM] PINN estimator requested but unavailable, remaining on L-BFGS.[0m
+[33m[WARN] [1764052304.346051407]: [MPCCTRL] Remote controller disabled, be careful![0m
+[33m[WARN] [1764052309.653719929]: Path 'PredictedPath' contains unnormalized quaternions. This warning will only be output once but may be true for others; enable DEBUG messages for ros.rviz.quaternions to see more details.[0m
+[rviz-7] killing on exit
+[pcl_render_node-6] killing on exit
+[odom_visualization-5] killing on exit
+[force_data_recorder-2] killing on exit
+[manager-3] killing on exit
+[so3_quadrotor-4] killing on exit
+[mpc_controller_node-1] killing on exit
+[INFO] [1764052331.237311]: [force_data_recorder] Node shutting down, generating final report.
+[INFO] [1764052331.263805]: [force_data_recorder] Writing CSV to /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251125062919_1_2830/force/force_circle-c1_low_20251125062919_1_2830.csv
+terminate called after throwing an instance of 'boost::wrapexcept<boost::lock_error>'
+  what():  boost: mutex lock failed in pthread_mutex_lock: Invalid argument
+terminate called without an active exception
+[0m[INFO] [1764052303.050385688]: Initializing nodelet with 16 worker threads.[0m
+[0m[INFO] [1764052303.162700397]: [so3_quadrotor_nodelet] Loading wind field configuration.[0m
+[0m[INFO] [1764052303.229764078]: [wind_field] Loaded configuration type=dryden[0m
+[INFO] [1764052331.748084]: [force_data_recorder] RMSE summary -> Load total: 0.511 N (x=0.187, y=0.406, z=0.248); Quad total: 0.814 N (x=0.730, y=0.342, z=0.116)
+[0m[INFO] [1764052302.965021274]: Loading nodelet /so3_quadrotor of type so3_quadrotor/Nodelet to manager manager with the following remappings:[0m
+[0m[INFO] [1764052302.970250284]: /so3_quadrotor/cable_info -> /cable_info[0m
+[0m[INFO] [1764052302.970267728]: /so3_quadrotor/imu -> /imu[0m
+[0m[INFO] [1764052302.970275282]: /so3_quadrotor/load_imu -> /load_imu[0m
+[0m[INFO] [1764052302.970282586]: /so3_quadrotor/odom -> /visual_slam/odom[0m
+[0m[INFO] [1764052302.970289699]: /so3_quadrotor/odom_payload -> /payload_odom[0m
+[0m[INFO] [1764052302.970337851]: /so3_quadrotor/rpm -> /rpm[0m
+[0m[INFO] [1764052302.970348401]: /so3_quadrotor/so3cmd -> /so3cmd[0m
+[0m[INFO] [1764052302.970355425]: /so3_quadrotor/vis -> /vis[0m
+[0m[INFO] [1764052302.970370183]: /traj_start_trigger -> /move_base_simple/goal[0m
+[0m[INFO] [1764052302.985950589]: waitForService: Service [/manager/load_nodelet] has not been advertised, waiting...[0m
+[0m[INFO] [1764052303.073062638]: waitForService: Service [/manager/load_nodelet] is now available.[0m
+[0m[INFO] [1764052331.238975966]: Unloading nodelet /so3_quadrotor from manager manager[0m
+[INFO] [1764052337.927812]: [force_data_recorder] Saved force comparison plots to /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251125062919_1_2830/force/force_circle-c1_low_20251125062919_1_2830.png and /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251125062919_1_2830/force/force_circle-c1_low_20251125062919_1_2830_totals.png
+[INFO] [1764052339.495163]: [force_data_recorder] Saved force error plots to /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251125062919_1_2830/force/force_circle-c1_low_20251125062919_1_2830_errors.png and /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251125062919_1_2830/force/force_circle-c1_low_20251125062919_1_2830_errors_totals.png
+[INFO] [1764052399.808074]: [force_data_recorder] Saved wind velocity plot to /home/wangshengkai/autotrans_ws/src/AutoTrans/controller/payload_mpc_controller/plots/run_circle-c1_low_20251125062919_1_2830/force/force_circle-c1_low_20251125062919_1_2830_wind.png
+Traceback (most recent call last):
+  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/impl/registration.py", line 375, in cleanup
+    multi()
+  File "/usr/lib/python3.8/xmlrpc/client.py", line 879, in __call__
+    return MultiCallIterator(self.__server.system.multicall(marshalled_list))
+  File "/usr/lib/python3.8/xmlrpc/client.py", line 1109, in __call__
+    return self.__send(self.__name, args)
+  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/core.py", line 696, in _ServerProxy__request
+    return xmlrpcclient.ServerProxy._ServerProxy__request(
+  File "/usr/lib/python3.8/xmlrpc/client.py", line 1450, in __request
+    response = self.__transport.request(
+  File "/usr/lib/python3.8/xmlrpc/client.py", line 1153, in request
+    return self.single_request(host, handler, request_body, verbose)
+  File "/usr/lib/python3.8/xmlrpc/client.py", line 1165, in single_request
+    http_conn = self.send_request(host, handler, request_body, verbose)
+  File "/usr/lib/python3.8/xmlrpc/client.py", line 1278, in send_request
+    self.send_content(connection, request_body)
+  File "/usr/lib/python3.8/xmlrpc/client.py", line 1308, in send_content
+    connection.endheaders(request_body)
+  File "/usr/lib/python3.8/http/client.py", line 1251, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/lib/python3.8/http/client.py", line 1011, in _send_output
+    self.send(msg)
+  File "/usr/lib/python3.8/http/client.py", line 951, in send
+    self.connect()
+  File "/usr/lib/python3.8/http/client.py", line 922, in connect
+    self.sock = self._create_connection(
+  File "/usr/lib/python3.8/socket.py", line 808, in create_connection
+    raise err
+  File "/usr/lib/python3.8/socket.py", line 796, in create_connection
+    sock.connect(sa)
+socket.timeout: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/core.py", line 606, in signal_shutdown
+    h(reason)
+  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/impl/registration.py", line 377, in cleanup
+    (se_errno, msg) = se.args
+ValueError: not enough values to unpack (expected 2, got 1)

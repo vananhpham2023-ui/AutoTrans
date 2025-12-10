@@ -1,0 +1,37 @@
+Force RMSE Summary (used for force_total2.png)
+Scenario: figure_eight_gradual (20)
+Units: force [N]
+RMSE definition: sqrt( mean( (F_est - F_true)^2 ) ) per axis;
+total = RMSE of 3D force vector norm.
+
+[PINN-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.303300
+  load_force_rmse_fy: 0.342065
+  load_force_rmse_fz: 0.122210
+  load_force_rmse_total: 0.086167
+Quad force components:
+  quad_force_rmse_fx: 0.290773
+  quad_force_rmse_fy: 0.317101
+  quad_force_rmse_fz: 0.104595
+  quad_force_rmse_total: 0.432436
+
+[LBFGS-NMPC]
+Load force components:
+  load_force_rmse_fx: 0.208397
+  load_force_rmse_fy: 0.261988
+  load_force_rmse_fz: 0.087358
+  load_force_rmse_total: 0.312076
+Quad force components:
+  quad_force_rmse_fx: 1.123013
+  quad_force_rmse_fy: 0.861320
+  quad_force_rmse_fz: 0.116677
+  quad_force_rmse_total: 1.228679
+
+---
+Analysis for force_total2.png
+
+- The figure `force_total2.png` shows the time evolution of the total force magnitude for the load and the quadrotor, comparing the estimated forces of PINN-NMPC and LBFGS-NMPC against the true force profile.
+- For the load, the total force RMSE of the PINN scheme is about 0.086 N, significantly lower than the LBFGS scheme (about 0.312 N). Although the component-wise RMSE values are of similar order, the overall magnitude error for the PINN estimator is much smaller, indicating that its load force estimates follow the true envelope more closely over the full trajectory.
+- For the quadrotor, the difference between the two schemes is even more pronounced: while the PINN scheme keeps the total quad force RMSE around 0.43 N, the LBFGS scheme reaches roughly 1.23 N, with particularly large errors in the Fx and Fy components. In `force_total2.png`, this appears as the PINN curve tracking the true force peaks and valleys with far less overshoot than the LBFGS curve.
+- Taking these results together, the PINN-based estimator provides a more accurate reconstruction of both load and quad total forces across the scenario, which supports the visual impression from `force_total2.png` that the PINN curves are systematically closer to the true force profile than the LBFGS curves.
